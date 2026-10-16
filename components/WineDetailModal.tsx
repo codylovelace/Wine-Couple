@@ -10,7 +10,6 @@ import {
   MapPin,
   ExternalLink,
   Bookmark,
-  Heart,
   Trash2,
   Edit3,
   Share2,
@@ -28,7 +27,6 @@ interface WineDetailModalProps {
   onEdit: (wine: Wine) => void;
   onDelete: (wine: Wine) => Promise<void>;
   onToggleWishlist: (wine: Wine) => void;
-  onToggleFavorite: (wine: Wine) => void;
   onRate: (wine: Wine) => void;
   onAddComment: (wine: Wine, text: string) => Promise<void>;
   onDeleteComment: (wine: Wine, commentId: string) => Promise<void>;
@@ -52,7 +50,6 @@ export function WineDetailModal({
   onEdit,
   onDelete,
   onToggleWishlist,
-  onToggleFavorite,
   onRate,
   onAddComment,
   onDeleteComment,
@@ -63,7 +60,7 @@ export function WineDetailModal({
 
   if (!wine) return null;
 
-  const verdictConfig = VERDICTS[wine.coupleVerdict] || VERDICTS['good'];
+  const verdictConfig = VERDICTS[wine.coupleVerdict] || VERDICTS['okay'];
   const tasted = isTasted(wine);
   const nameOf = (userId?: string) =>
     userId === me.id ? 'You' : userId && userId === partner?.id ? partner.name : 'Someone';
@@ -136,16 +133,6 @@ export function WineDetailModal({
               <X className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => onToggleFavorite(wine)}
-                aria-pressed={Boolean(wine.favorite)}
-                aria-label={wine.favorite ? 'Remove from favourites' : 'Add to favourites'}
-                className={`w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center border ${
-                  wine.favorite ? 'bg-rose-900/90 text-white border-champagne-500/40' : 'bg-black/70 text-stone-200 border-white/15'
-                }`}
-              >
-                <Heart className={`w-4 h-4 ${wine.favorite ? 'fill-rose-400 text-rose-400' : ''}`} />
-              </button>
               <button
                 onClick={() => onToggleWishlist(wine)}
                 aria-pressed={Boolean(wine.wishlist)}

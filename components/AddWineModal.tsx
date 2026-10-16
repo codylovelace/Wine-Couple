@@ -511,7 +511,7 @@ export function AddWineModal({ isOpen, onClose, me, partner, settings, editingWi
                     <span className="text-[11px] text-stone-400">Set from your swipes</span>
                   )}
                 </div>
-                <div className="grid grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-2 gap-1.5">
                   {(Object.keys(VERDICTS) as Verdict[]).map((vKey) => {
                     const cfg = VERDICTS[vKey];
                     const isSelected = shownVerdict === vKey;

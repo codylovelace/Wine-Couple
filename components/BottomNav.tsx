@@ -1,22 +1,20 @@
 'use client';
 
 import React from 'react';
-import { Wine, Plus, BarChart3, Bookmark, Camera, Sparkles } from 'lucide-react';
+import { Wine, Plus, BarChart3, ShoppingBag, Camera, Sparkles } from 'lucide-react';
 
-export type TabType = 'journal' | 'recommendations' | 'wishlist' | 'stats';
+export type TabType = 'journal' | 'recommendations' | 'shopping' | 'stats';
 
 interface BottomNavProps {
   activeTab: TabType;
   onSelectTab: (tab: TabType) => void;
   onOpenAddModal: () => void;
-  wishlistCount: number;
 }
 
 export function BottomNav({
   activeTab,
   onSelectTab,
   onOpenAddModal,
-  wishlistCount,
 }: BottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto glass-nav px-2 min-[375px]:px-3 pt-2.5 pb-safe border-t border-champagne-500/20">
@@ -64,24 +62,17 @@ export function BottomNav({
           </button>
         </div>
 
-        {/* Tab 3: Wishlist */}
+        {/* Tab 3: Buy again & wishlist */}
         <button
-          onClick={() => onSelectTab('wishlist')}
+          onClick={() => onSelectTab('shopping')}
           className={`flex flex-col items-center gap-1 py-1 px-1.5 min-[375px]:px-3 rounded-xl transition-all relative font-sans ${
-            activeTab === 'wishlist'
+            activeTab === 'shopping'
               ? 'text-champagne-gold font-semibold'
               : 'text-stone-300 hover:text-white font-medium'
           }`}
         >
-          <div className="relative">
-            <Bookmark className={`w-5 h-5 ${activeTab === 'wishlist' ? 'scale-105 text-champagne-gold' : ''}`} />
-            {wishlistCount > 0 && (
-              <span className="absolute -top-1 -right-2 bg-wine-700 text-champagne-100 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-champagne-500/30">
-                {wishlistCount}
-              </span>
-            )}
-          </div>
-          <span className="text-[11px] tracking-wide whitespace-nowrap">Wishlist</span>
+          <ShoppingBag className={`w-5 h-5 ${activeTab === 'shopping' ? 'scale-105 text-champagne-gold' : ''}`} />
+          <span className="text-[11px] tracking-wide whitespace-nowrap">Shopping</span>
         </button>
 
         {/* Tab 4: Stats / Insights */}

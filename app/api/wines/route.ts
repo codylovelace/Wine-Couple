@@ -36,7 +36,7 @@ export const POST = withUser(async (request: NextRequest, user) => {
       grape: '',
       region: '',
       country: '',
-      coupleVerdict: 'good',
+      coupleVerdict: 'okay',
       averageRating: 0,
       tastedTogether: false,
       purchase: { store: '', price: 0, currency: '£' },

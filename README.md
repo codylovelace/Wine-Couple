@@ -7,13 +7,14 @@ Built with Next.js, stored as JSON files plus photos on Docker volumes, and desi
 ## Features
 
 - **Your own login each**: Cody and Jess sign in separately. The cellar, wishlist and comments are shared; each of you can only set your own rating.
-- **Swipe to rate**: right if you'd buy it again, left if you wouldn't, with optional stars and notes. When one of you logs a bottle, the other gets it in their *Your turn to rate* list. Two rights make *Must Buy Again*, two lefts *Avoid*, a split *Table Wine*; you can also pick *Great Value*, *Enjoyable* or *Special Occasion* by hand.
+- **Swipe to rate**: right if you'd buy it again, left if you wouldn't, with optional stars and notes. When one of you logs a bottle, the other gets it in their *Your turn to rate* list. Two rights make *Must Buy Again*, two lefts *Avoid*, a split *Table Wine*; you can also mark a bottle *Great Value* by hand.
 - **Comments** on every wine, so you can talk about a bottle from your own phones.
 - **Bottle photos**: taken with the phone camera or picked from the photo roll, shrunk to a sensible size in the browser before upload.
 - **Optional label scanning**: with a Google Gemini API key, the app reads the label and fills in the name, producer, grape, region and vintage. Without a key you type the details yourself; it never guesses.
 - **Where you bought it and for how much**, plus search links (Wine-Searcher, Vivino, Google Shopping) to find it again.
 - **For You suggestions**: with a Gemini key, suggestions based on the wines you both liked (and away from ones you both disliked). They're cached and refreshed when your shared likes change, or on demand.
-- **Wishlist and couple stats.**
+- **Shopping list**: everything marked *Must Buy Again* or *Great Value*, grouped by the shop you bought it in, plus a wishlist of wines to try.
+- **Couple stats.**
 - **Backup and restore** of every wine, rating and comment as JSON from Settings (photos are not included; back up the photos volume for those).
 
 ## Self-hosting on Portainer

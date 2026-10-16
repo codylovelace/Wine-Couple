@@ -21,10 +21,8 @@ export function FilterBar({
     { id: 'all', label: 'All Cellar' },
     { id: 'good-value', label: 'Great Value' },
     { id: 'loved-it', label: 'Must Buy Again' },
-    { id: 'good', label: 'Enjoyable' },
     { id: 'okay', label: 'Table Wine' },
     { id: 'bad', label: 'Avoid' },
-    { id: 'special-occasion', label: 'Special Occasion' },
   ];
 
   const typeOptions: { id: string; label: string }[] = [
