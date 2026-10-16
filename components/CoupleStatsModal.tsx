@@ -5,6 +5,7 @@ import { Wine, UserSettings } from '@/lib/types';
 import { 
   X, BarChart3, Sparkles
 } from 'lucide-react';
+import { wineTitle } from '@/lib/format';
 
 interface CoupleStatsModalProps {
   isOpen: boolean;
@@ -175,7 +176,7 @@ export function CoupleStatsModal({
                       Value Distinction
                     </span>
                     <h4 className="text-sm font-serif font-semibold text-stone-100 truncate max-w-[190px]">
-                      {bestValueWine.name}
+                      {wineTitle(bestValueWine).title}
                     </h4>
                     <p className="text-xs text-stone-300 font-sans">
                       {bestValueWine.purchase?.store} · {bestValueWine.purchase?.currency}{bestValueWine.purchase?.price} ({bestValueWine.averageRating}★)
@@ -203,10 +204,10 @@ export function CoupleStatsModal({
                       Grand Cru Highlight
                     </span>
                     <h4 className="text-sm font-serif font-semibold text-stone-100 truncate max-w-[190px]">
-                      {highestRatedWine.name}
+                      {wineTitle(highestRatedWine).title}
                     </h4>
                     <p className="text-xs text-stone-300 font-sans">
-                      {highestRatedWine.producer} · {highestRatedWine.averageRating}★
+                      {wineTitle(highestRatedWine).subtitle} · {highestRatedWine.averageRating}★
                     </p>
                   </div>
                 </div>

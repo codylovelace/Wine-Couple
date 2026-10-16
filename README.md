@@ -6,12 +6,15 @@ Built with Next.js, stored as JSON files plus photos on Docker volumes, and desi
 
 ## Features
 
-- **Both of you rate every bottle**: separate ratings and notes, a combined score and a couple verdict (*Must Buy Again*, *Great Value*, *Enjoyable*, *Table Wine*, *Special Occasion*, *Avoid*).
+- **Your own login each**: Cody and Jess sign in separately. The cellar, wishlist and comments are shared; each of you can only set your own rating.
+- **Swipe to rate**: right if you'd buy it again, left if you wouldn't, with optional stars and notes. When one of you logs a bottle, the other gets it in their *Your turn to rate* list. Two rights make *Must Buy Again*, two lefts *Avoid*, a split *Table Wine*; you can also pick *Great Value*, *Enjoyable* or *Special Occasion* by hand.
+- **Comments** on every wine, so you can talk about a bottle from your own phones.
 - **Bottle photos**: taken with the phone camera or picked from the photo roll, shrunk to a sensible size in the browser before upload.
-- **Optional label scanning**: with a Google Gemini API key, the app reads the label and fills in producer, grape, region and vintage. Without a key you type the details yourself; it never guesses.
+- **Optional label scanning**: with a Google Gemini API key, the app reads the label and fills in the name, producer, grape, region and vintage. Without a key you type the details yourself; it never guesses.
 - **Where you bought it and for how much**, plus search links (Wine-Searcher, Vivino, Google Shopping) to find it again.
-- **Recommendations, wishlist and couple stats.**
-- **Export / import** of the wine list as JSON from Settings (photos are not included; back up the photos volume for those).
+- **For You suggestions**: with a Gemini key, suggestions based on the wines you both liked (and away from ones you both disliked). They're cached and refreshed when your shared likes change, or on demand.
+- **Wishlist and couple stats.**
+- **Backup and restore** of every wine, rating and comment as JSON from Settings (photos are not included; back up the photos volume for those).
 
 ## Self-hosting on Portainer
 
@@ -33,10 +36,11 @@ The image is private because the repository is private, so Portainer needs a log
    | --- | --- | --- |
    | `WINE_PORT` | `3000` | Port on the Docker host |
    | `TZ` | `Europe/London` | Container time zone |
-   | `GEMINI_API_KEY` | *(empty)* | Turns on label scanning. Can instead be entered in the app's Settings |
-   | `GEMINI_MODEL` | `gemini-flash-latest` | Gemini model used for label scanning |
+   | `GEMINI_API_KEY` | *(empty)* | Turns on label scanning and For You suggestions. Can instead be entered in the app's Settings |
+   | `GEMINI_MODEL` | `gemini-flash-latest` | Gemini model used for both |
 
 3. **Deploy the stack**, then open `http://<docker-host>:3000` on your phone.
+4. The first visit shows a setup screen: enter a name and password for each of you (names already in the cellar are filled in so your past ratings stay yours) and tick which one is you. After that the page is a normal sign-in.
 
 ### Updating
 
@@ -46,7 +50,7 @@ After new commits land on `main` and the GitHub Action has finished, open the st
 
 | Volume | Mounted at | Contains |
 | --- | --- | --- |
-| `wine-couple_wine-data` | `/app/data` | `wines.json`, `settings.json` (including a Gemini key saved in Settings) |
+| `wine-couple_wine-data` | `/app/data` | `wines.json`, `settings.json` (including a Gemini key saved in Settings), `users.json` (names and password hashes), `sessions.json`, `recommendations.json` (cached suggestions) |
 | `wine-couple_wine-photos` | `/app/uploads` | Bottle photos |
 
 Back up both volumes. If you'd rather use host folders (for example on the Synology), replace the named volumes with bind mounts and make the folders writable by UID 1001, which the app runs as: `chown -R 1001:1001 /path/to/folder`. The container's health check fails if either folder isn't writable, so a permissions problem shows up as *unhealthy* in Portainer.
@@ -62,7 +66,15 @@ Back up both volumes. If you'd rather use host folders (for example on the Synol
 
 Sharing a wine uses the phone's share sheet only over HTTPS; on a plain `http://` LAN address the app shows the text to copy instead. Putting the app behind a reverse proxy with HTTPS (Nginx Proxy Manager, Traefik, Caddy) makes sharing and installing smoother.
 
-The app has no login. Keep it on your home network or behind a VPN or an authenticating proxy; don't port-forward it to the internet.
+## Accounts and passwords
+
+- Change your own name or password in **Settings** (the round initial at the top right). Changing your password signs you out on your other devices.
+- If one of you forgets their password, the other can reset it in **Settings** (with their own password to confirm).
+- If you're both locked out, open the container's console in Portainer (**Containers → wine-couple → Console**, `/bin/sh`) and run `node scripts/reset-password.mjs "Cody" "a-new-password"`.
+- After five wrong passwords in a row an account is locked for a minute, doubling up to 15 minutes.
+- Sign-in cookies are marked secure when the request arrives over HTTPS, including via a proxy that sets `X-Forwarded-Proto`.
+
+Logins make the app safe to share between the two of you, but it's still a small home app: keep it on your home network, VPN, or behind HTTPS if you expose it.
 
 ## Local development
 

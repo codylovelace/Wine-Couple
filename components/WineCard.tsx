@@ -1,29 +1,31 @@
 'use client';
 
 import React from 'react';
-import { Wine, VERDICTS, UserSettings, isTasted, partnersDisagree } from '@/lib/types';
-import { Star, MapPin, ShoppingBag, Wine as WineIcon, Heart, X } from 'lucide-react';
+import { Wine, VERDICTS, PublicUser, isTasted, partnersDisagree } from '@/lib/types';
+import { awaitingRating, reviewFor } from '@/lib/wine-logic';
+import { wineTitle } from '@/lib/format';
+import { Star, MapPin, ShoppingBag, Wine as WineIcon, Heart, X, MessageCircle } from 'lucide-react';
 
 interface WineCardProps {
   wine: Wine;
-  settings: UserSettings;
+  me: PublicUser;
+  partner: PublicUser | null;
   onClick: () => void;
-  onToggleWishlist?: (e: React.MouseEvent) => void;
-  onToggleFavorite?: (e: React.MouseEvent) => void;
 }
 
-export function WineCard({
-  wine,
-  settings,
-  onClick,
-}: WineCardProps) {
+export function WineCard({ wine, me, partner, onClick }: WineCardProps) {
   const verdictConfig = VERDICTS[wine.coupleVerdict] || VERDICTS['good'];
   const tasted = isTasted(wine);
+  const myTurn = awaitingRating(wine, me.slot);
+  const partnerPending = partner ? awaitingRating(wine, partner.slot) : false;
+  const commentCount = wine.comments?.length ?? 0;
+  const { title, subtitle } = wineTitle(wine);
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
-      className="luxury-card p-4 rounded-3xl active:scale-[0.99] transition-all cursor-pointer hover:border-champagne-500/40 group relative overflow-hidden"
+      className="block w-full text-left luxury-card p-4 rounded-3xl active:scale-[0.99] transition-all cursor-pointer hover:border-champagne-500/40 group relative overflow-hidden"
     >
       <div className="flex gap-4">
         {/* Wine Bottle Image Thumbnail */}
@@ -31,7 +33,7 @@ export function WineCard({
           {wine.imageUrl ? (
             <img
               src={wine.imageUrl}
-              alt={wine.name}
+              alt={title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               loading="lazy"
             />
@@ -75,17 +77,17 @@ export function WineCard({
 
             {/* Wine Name & Producer */}
             <h3 className="font-serif font-semibold text-stone-100 text-xl leading-snug tracking-wide truncate">
-              {wine.name}
+              {title}
             </h3>
             <p className="text-xs text-champagne-200 font-sans font-medium tracking-wide truncate mt-0.5">
-              {wine.producer}
+              {subtitle}
             </p>
 
             {/* Grape & Origin */}
             <div className="flex items-center gap-1.5 text-xs text-stone-300 mt-1.5 truncate font-sans">
               <MapPin className="w-3.5 h-3.5 text-champagne-400/80 flex-shrink-0" />
               <span className="truncate">
-                {[wine.grape, wine.region, wine.country].filter(Boolean).join(' · ')}
+                {[subtitle === wine.grape ? '' : wine.grape, wine.region, wine.country].filter(Boolean).join(' · ')}
               </span>
             </div>
           </div>
@@ -107,29 +109,45 @@ export function WineCard({
               ) : null}
             </div>
 
-            {/* Each partner's swipe (and stars, if given) */}
+            {/* Each partner's swipe (and stars, if given), or who still needs to rate */}
             <div className="flex items-center gap-1.5 text-xs text-stone-300 font-sans">
-              {([
-                [settings.partner1Name, wine.partner1Review],
-                [settings.partner2Name, wine.partner2Review],
-              ] as const).map(([who, review]) =>
-                review && (typeof review.liked === 'boolean' || review.rating > 0) ? (
+              {commentCount > 0 && (
+                <span className="flex items-center gap-1 text-stone-300" aria-label={`${commentCount} comments`}>
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  {commentCount}
+                </span>
+              )}
+              {myTurn && (
+                <span className="px-2 py-0.5 rounded-md bg-wine-900 border border-champagne-500/45 text-champagne-100 font-semibold">
+                  Your turn
+                </span>
+              )}
+              {!myTurn && partnerPending && partner && (
+                <span className="px-2 py-0.5 rounded-md bg-black/70 border border-white/15 text-stone-300">
+                  Waiting for {partner.name}
+                </span>
+              )}
+              {[me, partner].map((person) => {
+                if (!person) return null;
+                const review = reviewFor(wine, person.slot);
+                if (!review || (typeof review.liked !== 'boolean' && !(review.rating > 0))) return null;
+                return (
                   <span
-                    key={who}
+                    key={person.id}
                     className="px-2 py-0.5 rounded-md bg-black/70 border border-white/15 flex items-center gap-1"
-                    title={`${who}: ${review.liked === true ? 'liked it' : review.liked === false ? "didn't like it" : ''}${review.rating > 0 ? ` ${review.rating}★` : ''}`}
+                    aria-label={`${person.name}: ${review.liked === true ? 'liked it' : review.liked === false ? "didn't like it" : ''}${review.rating > 0 ? ` ${review.rating} stars` : ''}`}
                   >
-                    <span className="text-champagne-400 font-bold">{who.charAt(0)}</span>
+                    <span className="text-champagne-400 font-bold">{person.name.charAt(0).toUpperCase()}</span>
                     {review.liked === true && <Heart className="w-3 h-3 text-emerald-300 fill-emerald-400/40" />}
                     {review.liked === false && <X className="w-3 h-3 text-rose-300" />}
                     {review.rating > 0 && <span className="text-stone-100 font-semibold">{review.rating}★</span>}
                   </span>
-                ) : null
-              )}
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </button>
   );
 }

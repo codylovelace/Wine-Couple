@@ -75,6 +75,23 @@ export const VERDICTS: Record<Verdict, VerdictConfig> = {
   },
 };
 
+export type PartnerSlot = 1 | 2;
+
+// What the browser knows about an account (never the password hash).
+export interface PublicUser {
+  id: string;
+  name: string;
+  // 1 or 2: which of the wine's partner reviews belongs to this person.
+  slot: PartnerSlot;
+}
+
+export interface WineComment {
+  id: string;
+  authorId: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface PartnerReview {
   tasterName: string;
   // This partner's swipe: right = liked it / would buy again, left = didn't.
@@ -144,9 +161,21 @@ export interface Wine {
   // Missing means tasted (every wine saved before this field existed).
   tasted?: boolean;
 
+  // A partner who said they didn't taste this one. Without it, a missing
+  // review means that partner hasn't rated it yet.
+  partner1NotTasted?: boolean;
+  partner2NotTasted?: boolean;
+  // true once someone picks the couple verdict by hand; until then it
+  // follows the two swipes as they come in.
+  verdictPinned?: boolean;
+
+  comments?: WineComment[];
+
   // Organization
   wishlist?: boolean;
   favorite?: boolean;
+  createdBy?: string; // user id
+  updatedBy?: string; // user id
   createdAt: string;
   updatedAt: string;
 }
