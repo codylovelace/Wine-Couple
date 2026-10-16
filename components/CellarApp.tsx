@@ -14,6 +14,8 @@ import { AddWineModal } from '@/components/AddWineModal';
 import { CoupleStatsModal } from '@/components/CoupleStatsModal';
 import { SettingsModal } from '@/components/SettingsModal';
 import { RecommendedSection } from '@/components/RecommendedSection';
+import { customShopsFrom } from '@/components/ShopPicker';
+import { ShopSheet } from '@/components/ShopSheet';
 import { RateSheet } from '@/components/RateSheet';
 import { ShoppingList } from '@/components/ShoppingList';
 import { Wine as WineIcon, Sparkles, Plus, ArrowUpDown, ChevronRight, Heart } from 'lucide-react';
@@ -51,6 +53,8 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
 
   // Sheets
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // A shop whose wines are listed in the shop sheet.
+  const [shopView, setShopView] = useState<string | null>(null);
   const [editingWine, setEditingWine] = useState<Wine | null>(null);
   const [draft, setDraft] = useState<Partial<Wine> | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -241,6 +245,7 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
     );
   }, [wines, searchQuery]);
 
+  const customShops = useMemo(() => customShopsFrom(wines.map((w) => w.purchase?.store)), [wines]);
   const wishlistWineNames = useMemo(() => wines.filter((w) => w.wishlist).map((w) => w.name.toLowerCase()), [wines]);
   const filtersActive = Boolean(searchQuery || activeVerdict !== 'all' || activeType !== 'all');
 
@@ -276,7 +281,13 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         {activeTab === 'shopping' ? (
           <>
             <h2 className="font-serif text-2xl text-stone-100 font-semibold px-1">Shopping</h2>
-            <ShoppingList wines={searchedWines} me={me} partner={partner} onOpen={(w) => setSelectedId(w.id)} />
+            <ShoppingList
+              wines={searchedWines}
+              me={me}
+              partner={partner}
+              onOpen={(w) => setSelectedId(w.id)}
+              onShopClick={setShopView}
+            />
           </>
         ) : activeTab === 'recommendations' ? (
           <RecommendedSection
@@ -366,7 +377,14 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
             ) : filteredWines.length > 0 ? (
               <div className="space-y-3">
                 {filteredWines.map((wine) => (
-                  <WineCard key={wine.id} wine={wine} me={me} partner={partner} onClick={() => setSelectedId(wine.id)} />
+                  <WineCard
+                    key={wine.id}
+                    wine={wine}
+                    me={me}
+                    partner={partner}
+                    onClick={() => setSelectedId(wine.id)}
+                    onShopClick={setShopView}
+                  />
                 ))}
               </div>
             ) : (
@@ -430,7 +448,22 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         onDeleteComment={handleDeleteComment}
         wishlistNames={wishlistWineNames}
         onAddToWishlist={handleAddRecommendationToWishlist}
+        onShopClick={(shop) => {
+          setSelectedId(null);
+          setShopView(shop);
+        }}
       />
+
+      {shopView && (
+        <ShopSheet
+          shop={shopView}
+          wines={wines}
+          me={me}
+          partner={partner}
+          onOpenWine={(w) => setSelectedId(w.id)}
+          onClose={() => setShopView(null)}
+        />
+      )}
 
       <AddWineModal
         isOpen={isAddModalOpen}
@@ -445,6 +478,7 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         editingWine={editingWine}
         draft={draft}
         onSubmit={handleSubmitWine}
+        customShops={customShops}
       />
 
       {rateQueue && (

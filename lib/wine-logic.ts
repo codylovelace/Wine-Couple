@@ -1,5 +1,6 @@
 // Rules shared by the API and the browser for who-rated-what on a wine.
 // No server-only imports here.
+import { canonicalShop } from './shops';
 import {
   PartnerReview,
   PartnerSlot,
@@ -169,7 +170,8 @@ function purchase(v: unknown): PurchaseDetails | undefined {
   const p = v as Record<string, unknown>;
   const price = Number(p.price);
   return {
-    store: text(p.store, 100) ?? '',
+    // Tidy known shops ("marks & spencer" -> "M&S") so lists group them together.
+    store: canonicalShop(text(p.store, 100) ?? ''),
     price: Number.isFinite(price) && price >= 0 ? Math.round(price * 100) / 100 : 0,
     currency: text(p.currency, 4) || '£',
     date: text(p.date, 10) || undefined,

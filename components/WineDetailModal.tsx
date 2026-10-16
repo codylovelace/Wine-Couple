@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Wine, VERDICTS, PublicUser, PartnerReview, isTasted, partnersDisagree } from '@/lib/types';
 import { reviewFor, reviewStatus } from '@/lib/wine-logic';
 import { formatDate, timeAgo, wineTitle } from '@/lib/format';
+import { canonicalShop } from '@/lib/shops';
 import { WineRecommendation } from '@/lib/recommendations';
 import { MoreLikeThis } from '@/components/MoreLikeThis';
 import {
@@ -35,6 +36,8 @@ interface WineDetailModalProps {
   // Lower-cased names already on the wishlist, for the "More like this" buttons.
   wishlistNames: string[];
   onAddToWishlist: (rec: WineRecommendation) => void;
+  // Lists every wine bought at this shop.
+  onShopClick: (shop: string) => void;
 }
 
 const sectionTitle = 'text-xs font-semibold tracking-wider text-champagne-300 uppercase';
@@ -60,6 +63,7 @@ export function WineDetailModal({
   onDeleteComment,
   wishlistNames,
   onAddToWishlist,
+  onShopClick,
 }: WineDetailModalProps) {
   const [comment, setComment] = useState('');
   const [sending, setSending] = useState(false);
@@ -323,10 +327,21 @@ export function WineDetailModal({
           {hasPurchase && (
             <section className="p-3.5 rounded-2xl bg-stone-900/50 border border-white/10 flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="flex items-center gap-1.5 text-sm font-bold text-stone-100">
-                  <StoreIcon className="w-4 h-4 text-champagne-gold flex-shrink-0" />
-                  <span className="truncate">{wine.purchase.store || 'Shop not recorded'}</span>
-                </p>
+                {wine.purchase.store ? (
+                  <button
+                    type="button"
+                    onClick={() => onShopClick(canonicalShop(wine.purchase.store))}
+                    className="flex items-center gap-1.5 text-sm font-bold text-stone-100 underline decoration-champagne-500/50 underline-offset-4 max-w-full"
+                  >
+                    <StoreIcon className="w-4 h-4 text-champagne-gold flex-shrink-0" />
+                    <span className="truncate">{canonicalShop(wine.purchase.store)}</span>
+                  </button>
+                ) : (
+                  <p className="flex items-center gap-1.5 text-sm font-bold text-stone-100">
+                    <StoreIcon className="w-4 h-4 text-champagne-gold flex-shrink-0" />
+                    <span className="truncate">Shop not recorded</span>
+                  </p>
+                )}
                 {wine.purchase.date && <p className="text-xs text-stone-300 mt-0.5 pl-5">Bought {formatDate(wine.purchase.date)}</p>}
               </div>
               {wine.purchase.price > 0 && (
