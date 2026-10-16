@@ -19,7 +19,14 @@ export async function geminiApiKey(): Promise<string | undefined> {
 // can show as-is, rather than as an exception.
 export async function callGemini(
   parts: GeminiPart[],
-  opts: { temperature?: number; timeoutMs?: number; feature: string }
+  opts: {
+    temperature?: number;
+    timeoutMs?: number;
+    feature: string;
+    // OpenAPI-style schema. Gemini then returns exactly this shape instead of
+    // whatever JSON it picks (a bare array, a different key, and so on).
+    responseSchema?: Record<string, unknown>;
+  }
 ): Promise<GeminiResult> {
   const apiKey = await geminiApiKey();
   if (!apiKey) {
@@ -42,7 +49,11 @@ export async function callGemini(
         },
         body: JSON.stringify({
           contents: [{ parts }],
-          generationConfig: { responseMimeType: 'application/json', temperature: opts.temperature ?? 0.2 },
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: opts.temperature ?? 0.2,
+            ...(opts.responseSchema ? { responseSchema: opts.responseSchema } : {}),
+          },
         }),
         signal: AbortSignal.timeout(opts.timeoutMs ?? 45_000),
       }
@@ -64,8 +75,27 @@ export async function callGemini(
     }
 
     const data = await res.json();
-    const text: string | undefined = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return { ok: false, reason: 'ai-error', error: 'Gemini returned an empty answer. Try again.' };
+    const candidate = data.candidates?.[0];
+    // Thinking models can put a thought summary in an earlier part, so join
+    // every non-thought part rather than trusting parts[0].
+    const outParts: { text?: string; thought?: boolean }[] = candidate?.content?.parts ?? [];
+    const text = outParts
+      .filter((p) => !p.thought && typeof p.text === 'string')
+      .map((p) => p.text)
+      .join('')
+      .trim();
+    if (!text) {
+      const why = candidate?.finishReason || data.promptFeedback?.blockReason || 'no candidates';
+      console.warn(`Gemini (${GEMINI_MODEL}) gave no text for ${opts.feature} (${why}):`, JSON.stringify(data).slice(0, 2000));
+      return {
+        ok: false,
+        reason: 'ai-error',
+        error:
+          why === 'SAFETY' || why === 'PROHIBITED_CONTENT'
+            ? 'Gemini declined to answer. Try again.'
+            : 'Gemini returned an empty answer. Try again.',
+      };
+    }
     return { ok: true, text };
   } catch (error) {
     console.error(`Gemini call for ${opts.feature} failed:`, error);
