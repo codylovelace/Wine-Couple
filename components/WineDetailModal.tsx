@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Wine, VERDICTS, UserSettings } from '@/lib/types';
+import { Wine, VERDICTS, UserSettings, isTasted } from '@/lib/types';
 import { 
   X, Star, MapPin, ExternalLink, Bookmark, Heart, 
   Trash2, Edit3, Share2, Sparkles, Calendar,
@@ -32,12 +32,23 @@ export function WineDetailModal({
   if (!isOpen || !wine) return null;
 
   const verdictConfig = VERDICTS[wine.coupleVerdict] || VERDICTS['good'];
+  const tasted = isTasted(wine);
+  const formatReview = (r?: { liked?: boolean; rating?: number }) => {
+    const parts = [
+      r?.liked === true ? 'Liked it' : r?.liked === false ? "Didn't like it" : '',
+      r?.rating && r.rating > 0 ? `${r.rating.toFixed(1)} ★` : '',
+    ].filter(Boolean);
+    return parts.length ? parts.join(' · ') : 'Not rated';
+  };
 
   const handleShare = () => {
     const bought = wine.purchase?.store
       ? ` Bought at ${wine.purchase.store}${wine.purchase.price ? ` for ${wine.purchase.currency}${wine.purchase.price}` : ''}.`
       : '';
-    const text = `We tasted ${wine.producer} ${wine.name} (${wine.vintage}): ${verdictConfig.label}, ${wine.averageRating}★.${bought}`;
+    const score = wine.averageRating > 0 ? `, ${wine.averageRating}★` : '';
+    const text = tasted
+      ? `We tasted ${wine.producer} ${wine.name} (${wine.vintage}): ${verdictConfig.label}${score}.${bought}`
+      : `On our wine wishlist: ${wine.producer} ${wine.name} (${wine.vintage}).`;
     // navigator.share and navigator.clipboard only exist on HTTPS (or localhost),
     // so on a plain-HTTP LAN address fall back to a prompt the user can copy from.
     if (navigator.share) {
@@ -121,11 +132,17 @@ export function WineDetailModal({
           {/* Bottom Title on Image */}
           <div className="absolute bottom-3 left-4 right-4 z-10">
             <div className="flex items-center gap-2 mb-1.5">
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-sans font-semibold tracking-wide uppercase border ${verdictConfig.bgClass} ${verdictConfig.colorClass} ${verdictConfig.borderClass}`}
-              >
-                <span>{verdictConfig.label}</span>
-              </span>
+              {tasted ? (
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-sans font-semibold tracking-wide uppercase border ${verdictConfig.bgClass} ${verdictConfig.colorClass} ${verdictConfig.borderClass}`}
+                >
+                  <span>{verdictConfig.label}</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-sans font-semibold tracking-wide uppercase border bg-stone-900/80 text-stone-200 border-white/20">
+                  <span>Not tasted yet</span>
+                </span>
+              )}
 
               {wine.vintage && (
                 <span className="px-2.5 py-0.5 rounded-full bg-black/80 text-champagne-100 text-xs font-sans font-bold border border-champagne-500/30">
@@ -160,7 +177,7 @@ export function WineDetailModal({
               </span>
               <div className="flex items-center justify-center gap-1 text-xs font-sans font-bold text-champagne-accent">
                 <Star className="w-3.5 h-3.5 fill-champagne-gold text-champagne-gold" />
-                <span>{wine.averageRating.toFixed(1)} / 5.0</span>
+                <span>{wine.averageRating > 0 ? `${wine.averageRating.toFixed(1)} / 5.0` : 'Not rated'}</span>
               </div>
             </div>
 
@@ -290,6 +307,9 @@ export function WineDetailModal({
               </h4>
             </div>
 
+            {/* No partner reviews exist before tasting */}
+            {tasted && (
+              <>
             {/* Partner 1 Review */}
             <div className="p-3.5 rounded-2xl bg-stone-900/70 border border-white/10 space-y-1.5">
               <div className="flex items-center justify-between">
@@ -301,7 +321,7 @@ export function WineDetailModal({
                 </div>
                 <div className="flex items-center gap-1 text-xs font-sans font-bold text-champagne-accent">
                   <Star className="w-3.5 h-3.5 fill-champagne-gold text-champagne-gold" />
-                  <span>{wine.partner1Review?.rating?.toFixed(1) || wine.averageRating.toFixed(1)} ★</span>
+                  <span>{wine.partner1Review ? formatReview(wine.partner1Review) : "Didn't taste it"}</span>
                 </div>
               </div>
               <p className="text-xs text-stone-200 font-sans leading-relaxed">
@@ -320,13 +340,15 @@ export function WineDetailModal({
                 </div>
                 <div className="flex items-center gap-1 text-xs font-sans font-bold text-champagne-accent">
                   <Star className="w-3.5 h-3.5 fill-champagne-gold text-champagne-gold" />
-                  <span>{wine.partner2Review?.rating?.toFixed(1) || wine.averageRating.toFixed(1)} ★</span>
+                  <span>{wine.partner2Review ? formatReview(wine.partner2Review) : "Didn't taste it"}</span>
                 </div>
               </div>
               <p className="text-xs text-stone-200 font-sans leading-relaxed">
                 {wine.partner2Review?.notes || 'No individual notes recorded.'}
               </p>
             </div>
+              </>
+            )}
 
             {/* Joint Conclusion */}
             {wine.jointNotes && (
@@ -466,7 +488,7 @@ export function WineDetailModal({
             className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-wine-900 via-wine-800 to-black hover:from-wine-800 hover:to-wine-900 text-champagne-100 border border-champagne-500/35 text-xs font-sans font-bold tracking-wide flex items-center justify-center gap-2 shadow-lg shadow-wine-950 transition-all"
           >
             <Edit3 className="w-4 h-4 text-champagne-300" />
-            <span>Edit Wine & Reviews</span>
+            <span>{tasted ? 'Edit Wine & Reviews' : 'Log Tasting'}</span>
           </button>
         </div>
       </div>

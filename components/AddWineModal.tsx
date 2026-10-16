@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Wine, WineType, Verdict, VERDICTS, UserSettings, WineScanResult } from '@/lib/types';
+import { Wine, WineType, Verdict, VERDICTS, UserSettings, WineScanResult, isTasted, averageOfRatings, verdictFromSwipes } from '@/lib/types';
+import { SwipeVerdict, SwipeChoice } from '@/components/SwipeVerdict';
 import { 
   X, Camera, Upload, Sparkles, Star, Store,
-  Check, RefreshCw, ChevronRight
+  Check, RefreshCw, ChevronRight, Heart
 } from 'lucide-react';
 import { POPULAR_AROMAS, COMMON_STORES, generateWineBuyLinks } from '@/lib/wine-search-links';
 import { prepareBottlePhoto } from '@/lib/client-image';
@@ -24,7 +25,8 @@ export function AddWineModal({
   settings,
   editingWine,
 }: AddWineModalProps) {
-  const [step, setStep] = useState<'photo' | 'details'>('photo');
+  // photo -> swipe (liked / didn't) -> details
+  const [step, setStep] = useState<'photo' | 'verdict' | 'details'>('photo');
   const [isScanning, setIsScanning] = useState(false);
   const [scanSource, setScanSource] = useState<string | null>(null);
   const [scanMessage, setScanMessage] = useState<string | null>(null);
@@ -49,10 +51,17 @@ export function AddWineModal({
   const [purchaseNotes, setPurchaseNotes] = useState('');
 
   // Couple Reviews
-  const [tastedTogether, setTastedTogether] = useState(true);
-  const [partner1Rating, setPartner1Rating] = useState(4.5);
+  // Each partner swipes in turn. liked is undefined until they swipe;
+  // tasted=false means they marked "didn't taste this one".
+  const [swipeTurn, setSwipeTurn] = useState<1 | 2>(1);
+  const [partner1Liked, setPartner1Liked] = useState<boolean | undefined>(undefined);
+  const [partner2Liked, setPartner2Liked] = useState<boolean | undefined>(undefined);
+  const [partner1Tasted, setPartner1Tasted] = useState(true);
+  const [partner2Tasted, setPartner2Tasted] = useState(true);
+  // 0 = not rated; stars are optional, the swipe verdict is the main rating.
+  const [partner1Rating, setPartner1Rating] = useState(0);
   const [partner1Notes, setPartner1Notes] = useState('');
-  const [partner2Rating, setPartner2Rating] = useState(4.5);
+  const [partner2Rating, setPartner2Rating] = useState(0);
   const [partner2Notes, setPartner2Notes] = useState('');
   const [jointNotes, setJointNotes] = useState('');
 
@@ -86,10 +95,16 @@ export function AddWineModal({
       setCurrency(editingWine.purchase?.currency || '£');
       setIsSpecialOffer(editingWine.purchase?.isSpecialOffer || false);
       setPurchaseNotes(editingWine.purchase?.notes || '');
-      setTastedTogether(editingWine.tastedTogether ?? true);
-      setPartner1Rating(editingWine.partner1Review?.rating ?? editingWine.averageRating);
+      const tastedBefore = isTasted(editingWine);
+      setPartner1Liked(editingWine.partner1Review?.liked);
+      setPartner2Liked(editingWine.partner2Review?.liked);
+      // Older wines always have both reviews; a new tasting starts with both.
+      setPartner1Tasted(!tastedBefore || !!editingWine.partner1Review);
+      setPartner2Tasted(!tastedBefore || !!editingWine.partner2Review);
+      setSwipeTurn(1);
+      setPartner1Rating(editingWine.partner1Review?.rating ?? 0);
       setPartner1Notes(editingWine.partner1Review?.notes || '');
-      setPartner2Rating(editingWine.partner2Review?.rating ?? editingWine.averageRating);
+      setPartner2Rating(editingWine.partner2Review?.rating ?? 0);
       setPartner2Notes(editingWine.partner2Review?.notes || '');
       setJointNotes(editingWine.jointNotes || '');
       setBody(editingWine.body || 3);
@@ -98,7 +113,8 @@ export function AddWineModal({
       setAcidity(editingWine.acidity || 3);
       setSelectedAromas(editingWine.aromaTags || []);
       setSelectedPairings(editingWine.foodPairings || []);
-      setStep('details');
+      // Logging a wishlist pick or a recommendation starts at the swipe.
+      setStep(isTasted(editingWine) ? 'details' : 'verdict');
     } else {
       resetForm();
       setStep('photo');
@@ -121,10 +137,14 @@ export function AddWineModal({
     setCurrency(settings.defaultCurrency || '£');
     setIsSpecialOffer(false);
     setPurchaseNotes('');
-    setTastedTogether(true);
-    setPartner1Rating(4.5);
+    setSwipeTurn(1);
+    setPartner1Liked(undefined);
+    setPartner2Liked(undefined);
+    setPartner1Tasted(true);
+    setPartner2Tasted(true);
+    setPartner1Rating(0);
     setPartner1Notes('');
-    setPartner2Rating(4.5);
+    setPartner2Rating(0);
     setPartner2Notes('');
     setJointNotes('');
     setBody(4);
@@ -135,6 +155,102 @@ export function AddWineModal({
     setSelectedPairings([]);
     setScanSource(null);
     setScanMessage(null);
+  };
+
+  const coupleAvg = averageOfRatings(partner1Tasted ? partner1Rating : 0, partner2Tasted ? partner2Rating : 0);
+
+  const renderPartnerReview = (n: 1 | 2) => {
+    const who = n === 1 ? settings.partner1Name : settings.partner2Name;
+    const tasted = n === 1 ? partner1Tasted : partner2Tasted;
+    const setTasted = n === 1 ? setPartner1Tasted : setPartner2Tasted;
+    const liked = n === 1 ? partner1Liked : partner2Liked;
+    const setLiked = n === 1 ? setPartner1Liked : setPartner2Liked;
+    const rating = n === 1 ? partner1Rating : partner2Rating;
+    const setRating = n === 1 ? setPartner1Rating : setPartner2Rating;
+    const notes = n === 1 ? partner1Notes : partner2Notes;
+    const setNotes = n === 1 ? setPartner1Notes : setPartner2Notes;
+
+    if (!tasted) {
+      return (
+        <div className="p-3 rounded-2xl bg-black/50 border border-white/10 flex items-center justify-between gap-2">
+          <span className="text-xs text-stone-300 font-sans">{who} didn&apos;t taste this one</span>
+          <button
+            type="button"
+            onClick={() => setTasted(true)}
+            className="text-xs underline text-champagne-gold font-semibold font-sans"
+          >
+            Add {who}&apos;s review
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="p-3 rounded-2xl bg-black/70 border border-white/10 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-sans font-semibold text-stone-100 flex items-center gap-2 min-w-0">
+            <span className="w-5 h-5 flex-shrink-0 rounded-full bg-champagne-950 border border-champagne-500/35 text-[11px] font-bold text-champagne-accent flex items-center justify-center">
+              {who.charAt(0)}
+            </span>
+            <span className="truncate">{who}</span>
+          </span>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setLiked(liked === false ? undefined : false)}
+              aria-pressed={liked === false}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-sans font-semibold ${
+                liked === false ? 'bg-rose-950/70 border-rose-500/60 text-rose-200' : 'bg-stone-900 border-white/10 text-stone-300'
+              }`}
+            >
+              <X className="w-3.5 h-3.5" /> Didn&apos;t
+            </button>
+            <button
+              type="button"
+              onClick={() => setLiked(liked === true ? undefined : true)}
+              aria-pressed={liked === true}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-sans font-semibold ${
+                liked === true ? 'bg-emerald-950/70 border-emerald-500/60 text-emerald-200' : 'bg-stone-900 border-white/10 text-stone-300'
+              }`}
+            >
+              <Heart className="w-3.5 h-3.5" /> Liked
+            </button>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[11px] text-stone-400 font-sans mr-1">Stars (optional)</span>
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              // Tapping the current star again clears the rating.
+              onClick={() => setRating((r) => (r === star ? 0 : star))}
+              aria-label={`${who}: ${star} star${star > 1 ? 's' : ''}`}
+              className="text-stone-700 hover:text-champagne-gold transition-colors"
+            >
+              <Star className={`w-4 h-4 ${rating >= star ? 'fill-champagne-gold text-champagne-gold' : 'text-stone-800'}`} />
+            </button>
+          ))}
+          <span className="text-xs font-sans font-bold text-champagne-accent ml-1 w-7 text-right">
+            {rating > 0 ? `${rating}★` : '–'}
+          </span>
+        </div>
+        <input
+          type="text"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder={`${who}'s tasting thoughts...`}
+          className="w-full px-3 py-2 rounded-xl bg-stone-900/90 border border-white/10 text-xs text-stone-100 font-sans focus:outline-none focus:border-champagne-gold"
+        />
+        <button
+          type="button"
+          onClick={() => setTasted(false)}
+          className="text-[11px] text-stone-400 hover:text-stone-200 font-sans"
+        >
+          {who} didn&apos;t taste this one
+        </button>
+      </div>
+    );
   };
 
   if (!isOpen) return null;
@@ -172,7 +288,6 @@ export function AddWineModal({
       console.error('Could not read photo:', err);
       setScanMessage("Couldn't read that photo. Try another one, or enter the details by hand.");
       setIsScanning(false);
-      setStep('details');
       return;
     }
     setImageUrl(dataUrl);
@@ -195,8 +310,28 @@ export function AddWineModal({
       setScanMessage('Label scan failed. Enter the details by hand.');
     } finally {
       setIsScanning(false);
-      setStep('details');
+      setStep('verdict');
     }
+  };
+
+  // One turn of the swipe step. liked: true/false from a swipe, or null when
+  // that partner says they didn't taste it.
+  const handleSwipeTurn = (liked: boolean | null) => {
+    if (swipeTurn === 1) {
+      setPartner1Tasted(liked !== null);
+      setPartner1Liked(liked ?? undefined);
+      setSwipeTurn(2);
+      return;
+    }
+    setPartner2Tasted(liked !== null);
+    setPartner2Liked(liked ?? undefined);
+    // Both turns done: set the couple verdict from the swipes. Finer verdicts
+    // (Great Value, Special Occasion...) can still be picked on the details screen.
+    const p1 = partner1Tasted ? partner1Liked : undefined;
+    const derived = verdictFromSwipes(p1, liked ?? undefined);
+    if (derived) setCoupleVerdict(derived);
+    setSwipeTurn(1);
+    setStep('details');
   };
 
   const handleSave = () => {
@@ -205,7 +340,7 @@ export function AddWineModal({
       return;
     }
 
-    const avgRating = Number(((partner1Rating + partner2Rating) / 2).toFixed(1));
+    const avgRating = averageOfRatings(partner1Tasted ? partner1Rating : 0, partner2Tasted ? partner2Rating : 0);
 
     const onlineLinks = generateWineBuyLinks({
       name,
@@ -225,25 +360,29 @@ export function AddWineModal({
       country: country.trim(),
       abv: abv.trim(),
       imageUrl: imageUrl || undefined,
+      tasted: true,
       coupleVerdict,
       averageRating: avgRating,
-      tastedTogether,
-      partner1Review: {
+      tastedTogether: partner1Tasted && partner2Tasted,
+      // A partner who didn't taste it gets no review at all.
+      partner1Review: partner1Tasted ? {
         tasterName: settings.partner1Name,
+        liked: partner1Liked,
         rating: partner1Rating,
         verdict: coupleVerdict,
         notes: partner1Notes.trim(),
         aromas: selectedAromas,
         date: new Date().toISOString().split('T')[0],
-      },
-      partner2Review: {
+      } : undefined,
+      partner2Review: partner2Tasted ? {
         tasterName: settings.partner2Name,
+        liked: partner2Liked,
         rating: partner2Rating,
         verdict: coupleVerdict,
         notes: partner2Notes.trim(),
         aromas: selectedAromas,
         date: new Date().toISOString().split('T')[0],
-      },
+      } : undefined,
       jointNotes: jointNotes.trim(),
       body,
       sweetness,
@@ -260,7 +399,8 @@ export function AddWineModal({
         notes: purchaseNotes.trim(),
       },
       onlineLinks,
-      wishlist: editingWine?.wishlist || false,
+      // Tasting a wishlist pick moves it into the journal; bookmark it again to keep it listed.
+      wishlist: editingWine && isTasted(editingWine) ? editingWine.wishlist || false : false,
       favorite: editingWine?.favorite || false,
       createdAt: editingWine?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -290,10 +430,14 @@ export function AddWineModal({
             </div>
             <div>
               <h2 className="font-serif font-semibold text-lg text-stone-100 tracking-wide">
-                {editingWine ? 'Edit Wine Details' : 'Log New Tasting'}
+                {editingWine && isTasted(editingWine) ? 'Edit Wine Details' : 'Log New Tasting'}
               </h2>
               <p className="text-xs text-stone-300 font-sans">
-                {step === 'photo' ? 'Step 1: Capture or Scan Bottle' : 'Step 2: Couple Reviews & Cellar Info'}
+                {step === 'photo'
+                  ? 'Step 1: Capture or Scan Bottle'
+                  : step === 'verdict'
+                    ? 'Step 2: Liked it or not?'
+                    : 'Step 3: Details & Notes'}
               </p>
             </div>
           </div>
@@ -323,6 +467,12 @@ export function AddWineModal({
                     : 'Add a Gemini API key in Settings to fill in the details from the label automatically.'}
                 </p>
               </div>
+
+              {scanMessage && !isScanning && (
+                <div className="p-3 rounded-2xl bg-stone-900/90 border border-white/15 text-xs text-stone-200 font-sans">
+                  {scanMessage}
+                </div>
+              )}
 
               {/* Scanning Overlay State */}
               {isScanning ? (
@@ -396,7 +546,7 @@ export function AddWineModal({
 
               {/* Skip to manual entry */}
               <button
-                onClick={() => setStep('details')}
+                onClick={() => setStep('verdict')}
                 className="w-full py-2 text-center text-xs text-stone-300 hover:text-champagne-200 transition-colors flex items-center justify-center gap-1 font-sans font-medium"
               >
                 <span>Enter details manually without photo</span>
@@ -405,9 +555,31 @@ export function AddWineModal({
             </div>
           )}
 
-          {/* STEP 2: REVIEW DETAILS & COUPLE TASTING */}
+          {/* STEP 2: SWIPE RIGHT (LIKED) / LEFT (DIDN'T) */}
+          {step === 'verdict' && (
+            <SwipeVerdict
+              // key remounts the card fresh for the second partner.
+              key={swipeTurn}
+              taster={swipeTurn === 1 ? settings.partner1Name : settings.partner2Name}
+              imageUrl={imageUrl}
+              name={name}
+              producer={producer}
+              vintage={vintage}
+              onChoose={(choice: SwipeChoice) => handleSwipeTurn(choice === 'liked')}
+              onNotTasted={() => handleSwipeTurn(null)}
+            />
+          )}
+
+          {/* STEP 3: REVIEW DETAILS & COUPLE TASTING */}
           {step === 'details' && (
             <div className="space-y-4 animate-fadeIn">
+              {partner1Tasted && partner2Tasted && typeof partner1Liked === 'boolean' && typeof partner2Liked === 'boolean' && partner1Liked !== partner2Liked && (
+                <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-xs text-amber-100 font-sans">
+                  You disagree: {partner1Liked ? settings.partner1Name : settings.partner2Name} liked it,{' '}
+                  {partner1Liked ? settings.partner2Name : settings.partner1Name} didn&apos;t. Pick the couple verdict below.
+                </div>
+              )}
+
               {scanMessage && (
                 <div className="p-3 rounded-2xl bg-stone-900/90 border border-white/15 flex items-start justify-between gap-3 text-xs text-stone-200 font-sans">
                   <span>{scanMessage}</span>
@@ -629,85 +801,12 @@ export function AddWineModal({
                   </h3>
                   <div className="flex items-center gap-1 text-xs text-champagne-accent font-sans font-bold">
                     <span>Couple Avg:</span>
-                    <span>{(((partner1Rating + partner2Rating) / 2) || 4.5).toFixed(1)}★</span>
+                    <span>{coupleAvg > 0 ? `${coupleAvg.toFixed(1)}★` : 'Optional'}</span>
                   </div>
                 </div>
 
-                {/* Partner 1 Review */}
-                <div className="p-3 rounded-2xl bg-black/70 border border-white/10 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-sans font-semibold text-stone-100 flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-champagne-950 border border-champagne-500/35 text-[11px] font-bold text-champagne-accent flex items-center justify-center">
-                        {settings.partner1Name.charAt(0)}
-                      </span>
-                      <span>{settings.partner1Name}'s Score</span>
-                    </span>
-                    <div className="flex items-center gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setPartner1Rating(star)}
-                          className="text-stone-700 hover:text-champagne-gold transition-colors"
-                        >
-                          <Star
-                            className={`w-4 h-4 ${
-                              partner1Rating >= star
-                                ? 'fill-champagne-gold text-champagne-gold'
-                                : 'text-stone-800'
-                            }`}
-                          />
-                        </button>
-                      ))}
-                      <span className="text-xs font-sans font-bold text-champagne-accent ml-1">{partner1Rating}★</span>
-                    </div>
-                  </div>
-                  <input
-                    type="text"
-                    value={partner1Notes}
-                    onChange={(e) => setPartner1Notes(e.target.value)}
-                    placeholder={`${settings.partner1Name}'s tasting thoughts...`}
-                    className="w-full px-3 py-2 rounded-xl bg-stone-900/90 border border-white/10 text-xs text-stone-100 font-sans focus:outline-none focus:border-champagne-gold"
-                  />
-                </div>
-
-                {/* Partner 2 Review */}
-                <div className="p-3 rounded-2xl bg-black/70 border border-white/10 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-sans font-semibold text-stone-100 flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-champagne-950 border border-champagne-500/35 text-[11px] font-bold text-champagne-accent flex items-center justify-center">
-                        {settings.partner2Name.charAt(0)}
-                      </span>
-                      <span>{settings.partner2Name}'s Score</span>
-                    </span>
-                    <div className="flex items-center gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setPartner2Rating(star)}
-                          className="text-stone-700 hover:text-champagne-gold transition-colors"
-                        >
-                          <Star
-                            className={`w-4 h-4 ${
-                              partner2Rating >= star
-                                ? 'fill-champagne-gold text-champagne-gold'
-                                : 'text-stone-800'
-                            }`}
-                          />
-                        </button>
-                      ))}
-                      <span className="text-xs font-sans font-bold text-champagne-accent ml-1">{partner2Rating}★</span>
-                    </div>
-                  </div>
-                  <input
-                    type="text"
-                    value={partner2Notes}
-                    onChange={(e) => setPartner2Notes(e.target.value)}
-                    placeholder={`${settings.partner2Name}'s tasting thoughts...`}
-                    className="w-full px-3 py-2 rounded-xl bg-stone-900/90 border border-white/10 text-xs text-stone-100 font-sans focus:outline-none focus:border-champagne-gold"
-                  />
-                </div>
+                {renderPartnerReview(1)}
+                {renderPartnerReview(2)}
 
                 {/* Joint Notes */}
                 <div>
@@ -774,10 +873,10 @@ export function AddWineModal({
           ) : (
             <button
               type="button"
-              onClick={() => setStep('details')}
+              onClick={() => setStep(step === 'photo' ? 'verdict' : 'details')}
               className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-wine-900 via-wine-800 to-black hover:from-wine-800 hover:to-wine-900 text-champagne-100 border border-champagne-500/35 text-xs font-sans font-bold tracking-wide shadow-lg shadow-wine-950 flex items-center justify-center gap-2"
             >
-              <span>Continue to Tasting Details</span>
+              <span>{step === 'photo' ? 'Continue' : 'Skip to Details'}</span>
               <ChevronRight className="w-4 h-4 text-champagne-gold" />
             </button>
           )}

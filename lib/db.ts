@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Wine, UserSettings } from './types';
+import { Wine, UserSettings, isTasted } from './types';
 import { generateWineBuyLinks } from './wine-search-links';
 import { DATA_DIR } from './paths';
 import { saveDataUrlImage, deleteUploadedImage } from './uploads';
@@ -51,11 +51,29 @@ async function readWinesFile(): Promise<Wine[]> {
   return JSON.parse(raw) as Wine[];
 }
 
-// Older versions stored photos as base64 data URLs inside wines.json.
-// Move any of those out to the uploads volume and keep just the URL.
-async function migrateInlineImages(wines: Wine[]): Promise<boolean> {
+// One-off fixes for data saved by older versions. Returns true if anything changed.
+async function migrateLegacyData(wines: Wine[]): Promise<boolean> {
   let changed = false;
   for (const wine of wines) {
+    // Recommendations added to the wishlist used to be saved as tasted wines
+    // with a made-up "Must Buy Again" 4.8. They have the wishlist- id prefix
+    // and no partner reviews; mark them untasted and drop the invented score
+    // and the "Online Selection" purchase (the price was only an estimate).
+    if (
+      wine.tasted === undefined &&
+      wine.id.startsWith('wishlist-') &&
+      !wine.partner1Review &&
+      !wine.partner2Review
+    ) {
+      wine.tasted = false;
+      wine.averageRating = 0;
+      if (wine.purchase?.store === 'Online Selection') {
+        wine.purchase = { ...wine.purchase, store: '', price: 0 };
+      }
+      changed = true;
+    }
+    // Older versions stored photos as base64 data URLs inside wines.json.
+    // Move any of those out to the uploads volume and keep just the URL.
     if (wine.imageUrl?.startsWith('data:image/')) {
       try {
         wine.imageUrl = await saveDataUrlImage(wine.imageUrl);
@@ -75,7 +93,7 @@ export async function getWines(): Promise<Wine[]> {
     await withWriteLock(async () => {
       if (migrationDone) return;
       const wines = await readWinesFile();
-      if (await migrateInlineImages(wines)) {
+      if (await migrateLegacyData(wines)) {
         await writeJsonAtomic(WINES_FILE, wines);
       }
       migrationDone = true;
@@ -198,7 +216,7 @@ export async function updateSettings(updates: Partial<UserSettings>): Promise<Us
 }
 
 export async function getStats() {
-  const wines = await getWines();
+  const wines = (await getWines()).filter(isTasted);
   const settings = await getSettings();
 
   const totalBottles = wines.length;
@@ -219,6 +237,7 @@ export async function getStats() {
   }
 
   let totalScore = 0;
+  let ratedCount = 0;
   let totalSpend = 0;
   let goodValueCount = 0;
   let lovedItCount = 0;
@@ -233,7 +252,10 @@ export async function getStats() {
   let bestValueWine: Wine | null = null;
 
   for (const wine of wines) {
-    totalScore += wine.averageRating || 0;
+    if (wine.averageRating > 0) {
+      totalScore += wine.averageRating;
+      ratedCount++;
+    }
     if (wine.purchase?.price) {
       totalSpend += Number(wine.purchase.price);
     }
@@ -255,6 +277,13 @@ export async function getStats() {
     if (wine.partner1Review?.rating && wine.partner2Review?.rating) {
       dualRatedCount++;
       agreementDiffSum += Math.abs(wine.partner1Review.rating - wine.partner2Review.rating);
+    } else if (
+      typeof wine.partner1Review?.liked === 'boolean' &&
+      typeof wine.partner2Review?.liked === 'boolean'
+    ) {
+      // No stars from both: use the swipes. A split counts as the widest gap.
+      dualRatedCount++;
+      agreementDiffSum += wine.partner1Review.liked === wine.partner2Review.liked ? 0 : 4;
     }
 
     if (!highestRatedWine || (wine.averageRating > highestRatedWine.averageRating)) {
@@ -276,7 +305,7 @@ export async function getStats() {
 
   return {
     totalBottles,
-    avgRating: Number((totalScore / totalBottles).toFixed(1)),
+    avgRating: ratedCount > 0 ? Number((totalScore / ratedCount).toFixed(1)) : 0,
     goodValueCount,
     lovedItCount,
     totalSpend: Number(totalSpend.toFixed(2)),

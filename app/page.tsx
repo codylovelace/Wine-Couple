@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Wine, UserSettings } from '@/lib/types';
+import { Wine, UserSettings, isTasted } from '@/lib/types';
 import { WineRecommendation, getRecommendationsForCouple } from '@/lib/recommendations';
 import { Navbar } from '@/components/Navbar';
 import { BottomNav, TabType } from '@/components/BottomNav';
@@ -46,9 +46,13 @@ export default function HomePage() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // Recommendations
+  // Untasted wishlist picks have no verdict or rating, so they stay out of the
+  // journal, counts, stats and the recommendation engine.
+  const tastedWines = useMemo(() => wines.filter(isTasted), [wines]);
+
   const recommendations = useMemo(() => {
-    return getRecommendationsForCouple(wines);
-  }, [wines]);
+    return getRecommendationsForCouple(tastedWines);
+  }, [tastedWines]);
 
   // Initial Fetch
   useEffect(() => {
@@ -181,25 +185,23 @@ export default function HomePage() {
       region: rec.region,
       country: rec.country,
       imageUrl: rec.imageUrl,
-      coupleVerdict: 'loved-it',
-      averageRating: 4.8,
-      tastedTogether: true,
-      body: 4,
-      sweetness: 1,
-      tannin: 3,
-      acidity: 3,
+      // Not tasted yet: no verdict or score of our own. coupleVerdict is a
+      // required field but is never shown or counted while tasted is false.
+      tasted: false,
+      coupleVerdict: 'good',
+      averageRating: 0,
+      tastedTogether: false,
       aromaTags: rec.flavorNotes,
       foodPairings: rec.foodPairings,
       purchase: {
-        store: 'Online Selection',
-        price: rec.estimatedPrice,
+        store: '',
+        price: 0,
         currency: rec.currency,
-        date: new Date().toISOString().split('T')[0],
       },
       onlineLinks: rec.onlineLinks,
       wishlist: true,
       favorite: false,
-      jointNotes: `Curated for our cellar: ${rec.matchedReason}`,
+      jointNotes: `Recommended: ${rec.matchedReason}. Around ${rec.currency}${rec.estimatedPrice.toFixed(2)}.`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -209,6 +211,8 @@ export default function HomePage() {
 
   // Handle recommendation -> Log tasting
   const handleLogRecommendationAsTasted = (rec: WineRecommendation) => {
+    // Pre-fill what the recommendation knows about the bottle; how you found
+    // it (swipe, stars, where bought) is yours to fill in.
     setEditingWine({
       id: `wine-${Date.now()}`,
       name: rec.name,
@@ -219,20 +223,16 @@ export default function HomePage() {
       region: rec.region,
       country: rec.country,
       imageUrl: rec.imageUrl,
-      coupleVerdict: 'good-value',
-      averageRating: 4.5,
+      tasted: false,
+      coupleVerdict: 'good',
+      averageRating: 0,
       tastedTogether: true,
-      body: 4,
-      sweetness: 1,
-      tannin: 3,
-      acidity: 3,
       aromaTags: rec.flavorNotes,
       foodPairings: rec.foodPairings,
       purchase: {
-        store: 'Waitrose',
-        price: rec.estimatedPrice,
+        store: '',
+        price: 0,
         currency: rec.currency,
-        date: new Date().toISOString().split('T')[0],
       },
       onlineLinks: rec.onlineLinks,
       wishlist: false,
@@ -276,18 +276,18 @@ export default function HomePage() {
 
   // Compute counts for filter pills
   const counts = useMemo(() => {
-    const c: Record<string, number> = { all: wines.length };
-    for (const w of wines) {
+    const c: Record<string, number> = { all: tastedWines.length };
+    for (const w of tastedWines) {
       c[w.coupleVerdict] = (c[w.coupleVerdict] || 0) + 1;
     }
     return c;
-  }, [wines]);
+  }, [tastedWines]);
 
   // Filtered & Sorted Wines
   const filteredWines = useMemo(() => {
     return wines
       .filter((w) => {
-        if (activeTab === 'wishlist' && !w.wishlist) {
+        if (activeTab === 'wishlist' ? !w.wishlist : !isTasted(w)) {
           return false;
         }
 
@@ -304,7 +304,7 @@ export default function HomePage() {
           if (!match) return false;
         }
 
-        if (activeVerdict !== 'all' && w.coupleVerdict !== activeVerdict) {
+        if (activeVerdict !== 'all' && (!isTasted(w) || w.coupleVerdict !== activeVerdict)) {
           return false;
         }
 
@@ -343,7 +343,7 @@ export default function HomePage() {
         onSearchChange={setSearchQuery}
         showSearch={showSearch}
         onToggleSearch={() => setShowSearch(!showSearch)}
-        totalBottles={wines.length}
+        totalBottles={tastedWines.length}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenStats={() => setIsStatsModalOpen(true)}
         activeFilterCount={activeVerdict !== 'all' || activeType !== 'all' ? 1 : 0}
@@ -396,7 +396,7 @@ export default function HomePage() {
                       </span>
                     </div>
                     <p className="text-xs text-stone-300 font-sans truncate max-w-[215px] mt-0.5">
-                      Based on your {wines.find((w) => w.averageRating >= 4.5)?.name || 'top tastings'}
+                      Based on your {tastedWines.find((w) => w.averageRating >= 4.5)?.name || 'top tastings'}
                     </p>
                   </div>
                 </div>
@@ -545,7 +545,7 @@ export default function HomePage() {
       <CoupleStatsModal
         isOpen={isStatsModalOpen}
         onClose={() => setIsStatsModalOpen(false)}
-        wines={wines}
+        wines={tastedWines}
         settings={settings}
         onSelectWine={(w) => setSelectedWine(w)}
       />
