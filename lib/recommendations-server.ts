@@ -41,9 +41,43 @@ function str(v: unknown, max = 120): string {
   return typeof v === 'string' ? v.trim().slice(0, max) : '';
 }
 
-function sanitize(raw: unknown, currency: string, cellar: Set<string>): WineRecommendation[] {
-  const list = (raw as { recommendations?: unknown })?.recommendations;
-  if (!Array.isArray(list)) return [];
+// The schema makes Gemini answer {"recommendations":[...]}, but older models
+// and aliases have been seen to ignore it and return a bare array or use
+// another key, so accept any of those.
+function findList(raw: unknown): unknown[] {
+  if (Array.isArray(raw)) return raw;
+  if (!raw || typeof raw !== 'object') return [];
+  const obj = raw as Record<string, unknown>;
+  if (Array.isArray(obj.recommendations)) return obj.recommendations;
+  return Object.values(obj).find(Array.isArray) ?? [];
+}
+
+const RESPONSE_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    recommendations: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          name: { type: 'STRING' },
+          producer: { type: 'STRING' },
+          type: { type: 'STRING', enum: WINE_TYPES },
+          grape: { type: 'STRING' },
+          region: { type: 'STRING' },
+          country: { type: 'STRING' },
+          approxPrice: { type: 'NUMBER' },
+          why: { type: 'STRING' },
+          similarTo: { type: 'ARRAY', items: { type: 'STRING' } },
+        },
+        required: ['name', 'producer', 'type', 'grape', 'country', 'approxPrice', 'why'],
+      },
+    },
+  },
+  required: ['recommendations'],
+};
+
+function sanitize(list: unknown[], currency: string, cellar: Set<string>): WineRecommendation[] {
   const out: WineRecommendation[] = [];
   for (const item of list) {
     if (!item || typeof item !== 'object') continue;
@@ -116,18 +150,37 @@ Return ONLY JSON:
 {"recommendations":[{"name":"wine name without producer","producer":"producer","type":"red|white|rose|sparkling|dessert|orange","grape":"grape or blend","region":"region","country":"country","approxPrice":12.5,"why":"one or two sentences, addressed to them, on why it fits","similarTo":["name of one of their liked wines it's based on"]}]}
 Prices are in ${currency}.`;
 
-  const result = await callGemini([{ text: prompt }], { feature: 'Suggestions', temperature: 0.7, timeoutMs: 60_000 });
+  const result = await callGemini([{ text: prompt }], {
+    feature: 'Suggestions',
+    temperature: 0.7,
+    timeoutMs: 60_000,
+    responseSchema: RESPONSE_SCHEMA,
+  });
   if (!result.ok) return result;
 
-  let recommendations: WineRecommendation[];
+  let list: unknown[];
   try {
-    const cellar = new Set(wines.map((w) => `${w.producer}|${w.name}`.toLowerCase()));
-    recommendations = sanitize(JSON.parse(result.text), currency, cellar);
+    // Some models wrap JSON in a markdown fence even in JSON mode.
+    list = findList(JSON.parse(result.text.replace(/^```(?:json)?\s*|\s*```$/g, '')));
   } catch {
+    console.warn(`Suggestions: Gemini (${GEMINI_MODEL}) answer was not JSON:`, result.text.slice(0, 2000));
     return { ok: false, reason: 'ai-error', error: "Gemini's answer couldn't be read. Try again." };
   }
+  const cellar = new Set(wines.map((w) => `${w.producer}|${w.name}`.toLowerCase()));
+  const recommendations = sanitize(list, currency, cellar);
   if (recommendations.length === 0) {
-    return { ok: false, reason: 'ai-error', error: 'Gemini didn’t suggest anything this time. Try again.' };
+    console.warn(
+      `Suggestions: nothing usable from Gemini (${GEMINI_MODEL}); ${list.length} item(s) returned:`,
+      result.text.slice(0, 2000)
+    );
+    return {
+      ok: false,
+      reason: 'ai-error',
+      error:
+        list.length > 0
+          ? 'Gemini only suggested wines already in your cellar. Try again.'
+          : 'Gemini didn’t suggest anything this time. Try again.',
+    };
   }
 
   const set: RecommendationSet = {
