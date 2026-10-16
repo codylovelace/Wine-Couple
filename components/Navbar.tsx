@@ -2,29 +2,26 @@
 
 import React from 'react';
 import { Wine as WineIcon, Search } from 'lucide-react';
-import { UserSettings } from '@/lib/types';
+import { PublicUser } from '@/lib/types';
 
 interface NavbarProps {
-  settings: UserSettings;
+  me: PublicUser;
+  partner: PublicUser | null;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   showSearch: boolean;
   onToggleSearch: () => void;
-  totalBottles: number;
   onOpenSettings: () => void;
-  onOpenStats: () => void;
-  activeFilterCount: number;
 }
 
 export function Navbar({
-  settings,
+  me,
+  partner,
   searchQuery,
   onSearchChange,
   showSearch,
   onToggleSearch,
-  totalBottles,
   onOpenSettings,
-  onOpenStats,
 }: NavbarProps) {
   return (
     <header className="sticky top-0 z-30 pt-safe bg-[#0d080b]/92 backdrop-blur-2xl border-b border-champagne-500/15 px-4 py-3.5">
@@ -39,18 +36,17 @@ export function Navbar({
               <span className="font-serif font-bold text-xl tracking-[0.18em] gold-text-shimmer uppercase">
                 Vino
               </span>
-              <span className="hidden min-[400px]:inline whitespace-nowrap text-[11px] px-2.5 py-0.5 rounded-full bg-wine-950/90 text-champagne-200 border border-champagne-500/25 font-sans font-medium tracking-wide">
-                Private Cellar
-              </span>
             </div>
-            <button
-              onClick={onOpenSettings}
-              className="text-xs text-stone-300 hover:text-champagne-200 flex items-center gap-1.5 transition-colors text-left mt-0.5 font-sans"
-            >
-              <span className="text-stone-200 font-medium">{settings.partner1Name}</span>
-              <span className="text-champagne-400 font-serif italic">&</span>
-              <span className="text-stone-200 font-medium">{settings.partner2Name}</span>
-            </button>
+            <p className="text-xs text-stone-300 mt-0.5 font-sans truncate">
+              <span className="text-stone-200 font-medium">{me.name}</span>
+              {partner && (
+                <>
+                  {' '}
+                  <span className="text-champagne-400 font-serif italic">&</span>{' '}
+                  <span className="text-stone-200 font-medium">{partner.name}</span>
+                </>
+              )}
+            </p>
           </div>
         </div>
 
@@ -68,11 +64,11 @@ export function Navbar({
             <Search className="w-4 h-4" />
           </button>
           <button
-            onClick={onOpenStats}
-            className="flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-xl bg-stone-900/80 border border-white/15 text-xs font-medium text-stone-200 hover:text-white hover:border-champagne-500/35 transition-all shadow-inner"
+            onClick={onOpenSettings}
+            aria-label={`Settings and account (signed in as ${me.name})`}
+            className="w-10 h-10 rounded-full bg-champagne-950 border border-champagne-500/40 text-sm font-bold text-champagne-accent flex items-center justify-center hover:border-champagne-gold"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-champagne-gold shadow-[0_0_8px_#d4af37]" />
-            <span className="font-sans text-xs font-semibold tracking-wide text-champagne-100">{totalBottles} {totalBottles === 1 ? 'bottle' : 'bottles'}</span>
+            {me.name.charAt(0).toUpperCase()}
           </button>
         </div>
       </div>

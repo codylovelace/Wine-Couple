@@ -6,7 +6,7 @@ import { Heart, X, Wine as WineIcon } from 'lucide-react';
 export type SwipeChoice = 'liked' | 'disliked';
 
 interface SwipeVerdictProps {
-  // Whose turn it is, e.g. "Cody".
+  // Who's rating, e.g. "Cody".
   taster: string;
   imageUrl?: string;
   name?: string;
@@ -39,6 +39,8 @@ export function SwipeVerdict({ taster, imageUrl, name, producer, vintage, onChoo
   // Arrow keys for anyone using a keyboard.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) return;
       if (e.key === 'ArrowRight') choose('liked');
       if (e.key === 'ArrowLeft') choose('disliked');
     };
@@ -168,7 +170,7 @@ export function SwipeVerdict({ taster, imageUrl, name, producer, vintage, onChoo
         onClick={onNotTasted}
         className="w-full py-1 text-center text-xs text-stone-300 hover:text-champagne-200 font-sans font-medium"
       >
-        {taster} didn&apos;t taste this one
+        I didn&apos;t taste this one
       </button>
     </div>
   );

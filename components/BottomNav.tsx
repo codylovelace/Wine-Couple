@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Wine, Plus, BarChart3, Bookmark, Settings, Camera, Sparkles } from 'lucide-react';
+import { Wine, Plus, BarChart3, Bookmark, Camera, Sparkles } from 'lucide-react';
 
-export type TabType = 'journal' | 'recommendations' | 'wishlist' | 'stats' | 'settings';
+export type TabType = 'journal' | 'recommendations' | 'wishlist' | 'stats';
 
 interface BottomNavProps {
   activeTab: TabType;

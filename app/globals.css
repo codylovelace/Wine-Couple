@@ -32,6 +32,14 @@ input, textarea, select {
   -webkit-user-select: text;
 }
 
+/* iOS zooms the page into any field under 16px when it's focused. Pinch zoom
+   stays enabled for accessibility, so keep form text at 16px on phones. */
+@media (max-width: 640px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
 /* iOS Safe Areas: max() keeps a minimum gap on phones without a home indicator,
    where env() resolves to 0 rather than falling back. */
 .pb-safe {

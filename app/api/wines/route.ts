@@ -1,112 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getWines, saveWine, replaceAllWines } from '@/lib/db';
-import { Wine, isTasted } from '@/lib/types';
+import { createWine, getWines } from '@/lib/db';
+import { withUser } from '@/lib/auth';
+import { Wine } from '@/lib/types';
+import { applyReview, applySharedFields, cleanReviewInput, cleanSharedFields } from '@/lib/wine-logic';
 
-export async function GET(request: NextRequest) {
+export const dynamic = 'force-dynamic';
+
+export const GET = withUser(async () => {
   try {
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get('q')?.toLowerCase() || '';
-    const verdict = searchParams.get('verdict');
-    const type = searchParams.get('type');
-    const favorite = searchParams.get('favorite') === 'true';
-    const wishlist = searchParams.get('wishlist') === 'true';
-
-    let wines = await getWines();
-
-    if (search) {
-      wines = wines.filter((w) =>
-        w.name.toLowerCase().includes(search) ||
-        w.producer.toLowerCase().includes(search) ||
-        w.grape.toLowerCase().includes(search) ||
-        w.region.toLowerCase().includes(search) ||
-        w.country.toLowerCase().includes(search) ||
-        w.purchase?.store.toLowerCase().includes(search)
-      );
-    }
-
-    if (verdict && verdict !== 'all') {
-      wines = wines.filter((w) => isTasted(w) && w.coupleVerdict === verdict);
-    }
-
-    if (type && type !== 'all') {
-      wines = wines.filter((w) => w.type === type);
-    }
-
-    if (favorite) {
-      wines = wines.filter((w) => w.favorite);
-    }
-
-    if (wishlist) {
-      wines = wines.filter((w) => w.wishlist);
-    }
-
-    return NextResponse.json({ success: true, wines });
+    return NextResponse.json({ success: true, wines: await getWines() });
   } catch (error) {
     console.error('API /api/wines GET error:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch wines' }, { status: 500 });
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+// Body: { wine: shared fields, myReview?: { liked, rating, notes } | null }
+// Only the signed-in person's own review can be set; the other partner's
+// stays open for them to add from their own phone.
+export const POST = withUser(async (request: NextRequest, user) => {
   try {
     const body = await request.json();
-
-    // Support bulk import array
-    if (Array.isArray(body.wines)) {
-      const savedList = await replaceAllWines(body.wines);
-      return NextResponse.json({ success: true, wines: savedList }, { status: 200 });
+    const fields = cleanSharedFields(body.wine);
+    if (!fields.name) {
+      return NextResponse.json({ success: false, error: 'The wine needs a name.' }, { status: 400 });
     }
 
-    if (!body.name || !body.producer) {
-      return NextResponse.json(
-        { success: false, error: 'Wine Name and Producer are required' },
-        { status: 400 }
-      );
-    }
-
-    const newWine: Wine = {
-      id: body.id || `wine-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      name: body.name,
-      producer: body.producer,
-      vintage: body.vintage || 'NV',
-      type: body.type || 'red',
-      grape: body.grape || '',
-      region: body.region || '',
-      country: body.country || '',
-      abv: body.abv || '',
-      imageUrl: body.imageUrl || '',
-      coupleVerdict: body.coupleVerdict || 'good',
-      averageRating: Number(body.averageRating) || 0,
-      tastedTogether: body.tastedTogether ?? true,
-      partner1Review: body.partner1Review,
-      partner2Review: body.partner2Review,
-      jointNotes: body.jointNotes || '',
-      body: body.body ?? 3,
-      sweetness: body.sweetness ?? 1,
-      tannin: body.tannin ?? 3,
-      acidity: body.acidity ?? 3,
-      aromaTags: body.aromaTags || [],
-      foodPairings: body.foodPairings || [],
-      purchase: {
-        store: body.purchase?.store || '',
-        price: Number(body.purchase?.price) || 0,
-        currency: body.purchase?.currency || '£',
-        date: body.purchase?.date || new Date().toISOString().split('T')[0],
-        isSpecialOffer: body.purchase?.isSpecialOffer || false,
-        notes: body.purchase?.notes || '',
-      },
-      onlineLinks: body.onlineLinks || {},
-      tasted: body.tasted,
-      wishlist: body.wishlist || false,
-      favorite: body.favorite || false,
-      createdAt: body.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    const now = new Date().toISOString();
+    const wine: Wine = {
+      id: `wine-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      name: '',
+      producer: '',
+      vintage: 'NV',
+      type: 'red',
+      grape: '',
+      region: '',
+      country: '',
+      coupleVerdict: 'good',
+      averageRating: 0,
+      tastedTogether: false,
+      purchase: { store: '', price: 0, currency: '£' },
+      onlineLinks: {},
+      comments: [],
+      createdBy: user.id,
+      updatedBy: user.id,
+      createdAt: now,
+      updatedAt: now,
     };
+    applySharedFields(wine, fields);
+    if (!wine.vintage) wine.vintage = 'NV';
 
-    const saved = await saveWine(newWine);
+    const review = cleanReviewInput(body.myReview);
+    if (review !== undefined) applyReview(wine, user.slot, user.name, review);
+
+    const saved = await createWine(wine);
     return NextResponse.json({ success: true, wine: saved }, { status: 201 });
   } catch (error) {
     console.error('API /api/wines POST error:', error);
     return NextResponse.json({ success: false, error: 'Failed to save wine' }, { status: 500 });
   }
-}
+});
