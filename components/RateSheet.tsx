@@ -100,7 +100,7 @@ export function RateSheet({ queue, me, partner, onRate, onClose }: RateSheetProp
                 {partner && partnerReview && typeof partnerReview.liked === 'boolean' && (
                   <p className="text-xs text-stone-300">
                     {partner.name} {partnerReview.liked ? 'liked it' : 'didn’t like it'}
-                    {partnerReview.liked !== liked ? ', so it’s a split.' : ' too.'}
+                    {partnerReview.liked !== liked ? ', so it’s a Split Decision.' : ' too.'}
                   </p>
                 )}
               </div>

@@ -577,16 +577,18 @@ export function AddWineModal({ isOpen, onClose, me, partner, settings, editingWi
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {(Object.keys(VERDICTS) as Verdict[]).map((vKey) => {
+                  {(Object.keys(VERDICTS) as Verdict[]).map((vKey, i, all) => {
                     const cfg = VERDICTS[vKey];
                     const isSelected = shownVerdict === vKey;
+                    // An odd one out gets the whole last row.
+                    const lastAlone = i === all.length - 1 && all.length % 2 === 1;
                     return (
                       <button
                         key={vKey}
                         type="button"
                         onClick={() => setPickedVerdict(vKey)}
                         aria-pressed={isSelected}
-                        className={`p-2.5 rounded-2xl text-xs flex flex-col items-center gap-1 border transition-all ${
+                        className={`p-2.5 rounded-2xl text-xs flex flex-col items-center gap-1 border transition-all ${lastAlone ? 'col-span-2' : ''} ${
                           isSelected
                             ? `${cfg.bgClass} ${cfg.colorClass} ${cfg.borderClass} ring-1 ring-champagne-gold/60 font-semibold`
                             : 'bg-stone-900/70 border-white/10 text-stone-300 font-medium'

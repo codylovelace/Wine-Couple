@@ -1,8 +1,8 @@
 export type WineType = 'red' | 'white' | 'rose' | 'sparkling' | 'dessert' | 'orange';
 
-// Three verdicts follow the swipes (both right, split, both left); Great
-// Value is picked by hand.
-export type Verdict = 'loved-it' | 'good-value' | 'okay' | 'bad';
+// Three verdicts follow the swipes (both right, both left, or split); Great
+// Value and Table Wine are picked by hand.
+export type Verdict = 'loved-it' | 'good-value' | 'okay' | 'bad' | 'split';
 
 export interface VerdictConfig {
   id: Verdict;
@@ -50,6 +50,15 @@ export const VERDICTS: Record<Verdict, VerdictConfig> = {
     bgClass: 'bg-rose-950/40',
     borderClass: 'border-rose-500/30',
     description: 'Not to our taste, would not purchase again',
+  },
+  split: {
+    id: 'split',
+    label: 'Split Decision',
+    shortLabel: 'Split Decision',
+    colorClass: 'text-violet-300',
+    bgClass: 'bg-violet-950/40',
+    borderClass: 'border-violet-500/30',
+    description: 'One of you would buy it again, the other wouldn’t',
   },
 };
 
@@ -201,15 +210,15 @@ export function averageOfRatings(...ratings: (number | undefined)[]): number {
   return Number((given.reduce((a, b) => a + b, 0) / given.length).toFixed(1));
 }
 
-// Couple verdict implied by the two swipes. A split lands on Table Wine
-// ("average") rather than picking a side; it can be changed on the details
-// screen. Undefined when nobody swiped.
+// Couple verdict implied by the two swipes: both right is Must Buy Again,
+// both left is Avoid, one each is a Split Decision. It can be changed on the
+// details screen. Undefined when nobody swiped.
 export function verdictFromSwipes(p1?: boolean, p2?: boolean): Verdict | undefined {
   const swipes = [p1, p2].filter((v): v is boolean => typeof v === 'boolean');
   if (swipes.length === 0) return undefined;
   if (swipes.every(Boolean)) return 'loved-it';
   if (swipes.every((v) => !v)) return 'bad';
-  return 'okay';
+  return 'split';
 }
 
 // True when both partners swiped and disagreed.

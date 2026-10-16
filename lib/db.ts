@@ -11,7 +11,7 @@ const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const META_FILE = path.join(DATA_DIR, 'meta.json');
 
 // Bump when adding a one-off data migration below.
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 const DEFAULT_SETTINGS: UserSettings = {
   partner1Name: 'Cody',
@@ -107,6 +107,16 @@ async function migrateLegacyData(wines: Wine[], fromVersion: number): Promise<bo
       }
       // The favourite heart was removed; "would buy again" covers it.
       delete (wine as Wine & { favorite?: boolean }).favorite;
+      changed = true;
+    }
+
+    if (fromVersion < 4) {
+      // Split swipes used to land on Table Wine; they get their own Split
+      // Decision verdict now (2026-10-16). Hand-picked verdicts stay.
+      if (isTasted(wine) && !wine.verdictPinned && wine.coupleVerdict === 'okay') {
+        const fromSwipes = verdictFromSwipes(wine.partner1Review?.liked, wine.partner2Review?.liked);
+        if (fromSwipes === 'split') wine.coupleVerdict = 'split';
+      }
       changed = true;
     }
   }
