@@ -39,6 +39,7 @@ The image is private because the repository is private, so Portainer needs a log
    | `TZ` | `Europe/London` | Container time zone |
    | `GEMINI_API_KEY` | *(empty)* | Turns on label scanning and For You suggestions. Can instead be entered in the app's Settings |
    | `GEMINI_MODEL` | `gemini-flash-latest` | Gemini model used for both |
+   | `GEMINI_FALLBACK_MODEL` | *(empty)* | Optional backup model, tried when the main one is overloaded or rate limited after a few retries. May cost more than the main model |
 
 3. **Deploy the stack**, then open `http://<docker-host>:3000` on your phone.
 4. The first visit shows a setup screen: enter a name and password for each of you (names already in the cellar are filled in so your past ratings stay yours) and tick which one is you. After that the page is a normal sign-in.

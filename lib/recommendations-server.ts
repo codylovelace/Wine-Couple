@@ -186,7 +186,7 @@ Prices are in ${currency}.`;
   const set: RecommendationSet = {
     fingerprint: fingerprint(wines),
     generatedAt: new Date().toISOString(),
-    model: GEMINI_MODEL,
+    model: result.model,
     recommendations,
   };
   await withWriteLock(() => writeJsonAtomic(CACHE_FILE, set));
