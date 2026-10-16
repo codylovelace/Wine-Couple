@@ -1,0 +1,20 @@
+# dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# runtime data (lives in Docker volumes, never in git)
+data/
+uploads/
+public/uploads/
+
+# env files
+.env
+.env*.local
+
+# misc
+.DS_Store
+npm-debug.log*
+*.tsbuildinfo

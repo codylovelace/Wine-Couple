@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+body {
+  color: #faf7f2;
+  background: #0d080b;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior-y: none;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 20, 45, 0.28), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 50%, rgba(80, 15, 30, 0.16), transparent),
+    radial-gradient(ellipse 70% 60% at 0% 90%, rgba(60, 10, 25, 0.22), transparent);
+  background-attachment: fixed;
+}
+
+input, textarea, select {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* iOS Safe Areas */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1.25rem);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0.75rem);
+}
+
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom, 1.25rem);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.25);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.45);
+}
+
+/* Hide scrollbar for clean horizontal pill scrolling on mobile */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Luxury Glassmorphism effects */
+.luxury-card {
+  background: linear-gradient(135deg, rgba(32, 18, 24, 0.85) 0%, rgba(20, 11, 15, 0.92) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(229, 207, 171, 0.16);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.42);
+}
+
+.luxury-card-gold {
+  background: linear-gradient(135deg, rgba(44, 22, 31, 0.88) 0%, rgba(22, 11, 16, 0.95) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(212, 175, 55, 0.32);
+  box-shadow: 0 10px 35px -5px rgba(120, 20, 45, 0.25), 0 0 15px 0 rgba(212, 175, 55, 0.1);
+}
+
+.luxury-banner {
+  background: linear-gradient(135deg, rgba(72, 14, 28, 0.78) 0%, rgba(28, 9, 17, 0.94) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  box-shadow: 0 12px 30px -8px rgba(90, 12, 30, 0.45);
+}
+
+.glass-nav {
+  background: rgba(15, 9, 13, 0.92);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-top: 1px solid rgba(229, 207, 171, 0.15);
+}
+
+.gold-text-shimmer {
+  background: linear-gradient(135deg, #fffaf0 0%, #ebd6b5 50%, #d4af37 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

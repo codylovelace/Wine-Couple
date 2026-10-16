@@ -1,0 +1,22 @@
+{
+  "name": "Vino - Couple Wine Tasting Journal",
+  "short_name": "Vino",
+  "description": "Collaborative wine tasting journal and smart AI bottle scanner for couples",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#231118",
+  "theme_color": "#722F37",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

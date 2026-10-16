@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="wineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#881337"/>
+      <stop offset="50%" stop-color="#4c0519"/>
+      <stop offset="100%" stop-color="#1c040a"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="100%" stop-color="#ca8a04"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#wineGrad)"/>
+  <!-- Wine Glass & Hearts -->
+  <g transform="translate(106, 80) scale(0.6)">
+    <path d="M250 50 C180 50 130 110 130 190 C130 290 230 350 230 390 L230 450 L170 450 C160 450 150 460 150 470 C150 480 160 490 170 490 L330 490 C340 490 350 480 350 470 C350 460 340 450 330 450 L270 450 L270 390 C270 350 370 290 370 190 C370 110 320 50 250 50 Z" fill="none" stroke="url(#goldGrad)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M150 190 C150 270 230 320 250 320 C270 320 350 270 350 190 Z" fill="#e11d48" opacity="0.85"/>
+    <circle cx="210" cy="180" r="10" fill="#fff" opacity="0.6"/>
+    <!-- Couple Hearts -->
+    <path d="M350 80 C350 60 370 40 395 40 C420 40 440 60 440 85 C440 120 395 150 395 150 C395 150 350 120 350 85 Z" fill="#f43f5e"/>
+    <path d="M110 80 C110 60 130 40 155 40 C180 40 200 60 200 85 C200 120 155 150 155 150 C155 150 110 120 110 85 Z" fill="#fb7185"/>
+  </g>
+</svg>

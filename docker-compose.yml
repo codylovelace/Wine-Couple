@@ -1,0 +1,15 @@
+services:
+  vino-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vino-wine-journal
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    volumes:
+      - ./data:/app/data
+      - ./public/uploads:/app/public/uploads
