@@ -1,0 +1,24 @@
+# Same stack, but builds the image from this repository instead of pulling
+# it from ghcr.io. Use for local testing (docker compose -f docker-compose.build.yml up -d --build)
+# or a Portainer "Repository" stack with this file as the compose path.
+services:
+  wine-couple:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: wine-couple:local
+    container_name: wine-couple
+    restart: unless-stopped
+    ports:
+      - "${WINE_PORT:-3000}:3000"
+    environment:
+      - TZ=${TZ:-Europe/London}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-flash-latest}
+    volumes:
+      - wine-data:/app/data
+      - wine-photos:/app/uploads
+
+volumes:
+  wine-data:
+  wine-photos:

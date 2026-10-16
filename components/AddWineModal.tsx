@@ -7,6 +7,7 @@ import {
   Check, RefreshCw, ChevronRight
 } from 'lucide-react';
 import { POPULAR_AROMAS, COMMON_STORES, generateWineBuyLinks } from '@/lib/wine-search-links';
+import { prepareBottlePhoto } from '@/lib/client-image';
 
 interface AddWineModalProps {
   isOpen: boolean;
@@ -26,22 +27,23 @@ export function AddWineModal({
   const [step, setStep] = useState<'photo' | 'details'>('photo');
   const [isScanning, setIsScanning] = useState(false);
   const [scanSource, setScanSource] = useState<string | null>(null);
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
 
   // Form State
   const [name, setName] = useState('');
   const [producer, setProducer] = useState('');
-  const [vintage, setVintage] = useState('2022');
+  const [vintage, setVintage] = useState('');
   const [type, setType] = useState<WineType>('red');
   const [grape, setGrape] = useState('');
   const [region, setRegion] = useState('');
   const [country, setCountry] = useState('');
-  const [abv, setAbv] = useState('13.5%');
+  const [abv, setAbv] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [coupleVerdict, setCoupleVerdict] = useState<Verdict>('good-value');
 
   // Purchase details
-  const [store, setStore] = useState('Waitrose');
-  const [price, setPrice] = useState('14.99');
+  const [store, setStore] = useState('');
+  const [price, setPrice] = useState('');
   const [currency, setCurrency] = useState(settings.defaultCurrency || '£');
   const [isSpecialOffer, setIsSpecialOffer] = useState(false);
   const [purchaseNotes, setPurchaseNotes] = useState('');
@@ -61,8 +63,8 @@ export function AddWineModal({
   const [acidity, setAcidity] = useState(3);
 
   // Aroma & Food tags
-  const [selectedAromas, setSelectedAromas] = useState<string[]>(['Dark Cherry', 'Vanilla']);
-  const [selectedPairings, setSelectedPairings] = useState<string[]>(['Ribeye Steak']);
+  const [selectedAromas, setSelectedAromas] = useState<string[]>([]);
+  const [selectedPairings, setSelectedPairings] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -76,11 +78,11 @@ export function AddWineModal({
       setGrape(editingWine.grape);
       setRegion(editingWine.region);
       setCountry(editingWine.country);
-      setAbv(editingWine.abv || '13.5%');
+      setAbv(editingWine.abv || '');
       setImageUrl(editingWine.imageUrl || '');
       setCoupleVerdict(editingWine.coupleVerdict);
-      setStore(editingWine.purchase?.store || 'Waitrose');
-      setPrice(String(editingWine.purchase?.price || '14.99'));
+      setStore(editingWine.purchase?.store || '');
+      setPrice(editingWine.purchase?.price ? String(editingWine.purchase.price) : '');
       setCurrency(editingWine.purchase?.currency || '£');
       setIsSpecialOffer(editingWine.purchase?.isSpecialOffer || false);
       setPurchaseNotes(editingWine.purchase?.notes || '');
@@ -106,16 +108,16 @@ export function AddWineModal({
   const resetForm = () => {
     setName('');
     setProducer('');
-    setVintage('2022');
+    setVintage('');
     setType('red');
     setGrape('');
     setRegion('');
     setCountry('');
-    setAbv('13.5%');
+    setAbv('');
     setImageUrl('');
     setCoupleVerdict('good-value');
-    setStore('Waitrose');
-    setPrice('14.99');
+    setStore('');
+    setPrice('');
     setCurrency(settings.defaultCurrency || '£');
     setIsSpecialOffer(false);
     setPurchaseNotes('');
@@ -129,112 +131,72 @@ export function AddWineModal({
     setSweetness(1);
     setTannin(3);
     setAcidity(3);
-    setSelectedAromas(['Dark Cherry', 'Vanilla']);
-    setSelectedPairings(['Ribeye Steak']);
+    setSelectedAromas([]);
+    setSelectedPairings([]);
     setScanSource(null);
+    setScanMessage(null);
   };
 
   if (!isOpen) return null;
 
-  const handleImageFile = async (file: File) => {
-    setIsScanning(true);
-
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
-      setImageUrl(base64);
-
-      try {
-        const res = await fetch('/api/scan-wine', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imageBase64: base64,
-            fileName: file.name,
-            userKey: settings.geminiApiKey,
-          }),
-        });
-
-        const data = await res.json();
-        if (data.success && data.scanResult) {
-          const r: WineScanResult = data.scanResult;
-          setName(r.name || 'Gran Reserva');
-          setProducer(r.producer || 'Bodega');
-          setVintage(r.vintage || '2021');
-          setType(r.type || 'red');
-          setGrape(r.grape || 'Tempranillo');
-          setRegion(r.region || 'Rioja');
-          setCountry(r.country || 'Spain');
-          setAbv(r.abv || '13.5%');
-          if (r.suggestedVerdict) setCoupleVerdict(r.suggestedVerdict);
-          if (r.suggestedAromas) setSelectedAromas(r.suggestedAromas);
-          if (r.foodPairings) setSelectedPairings(r.foodPairings);
-          if (r.body) setBody(r.body);
-          if (r.sweetness) setSweetness(r.sweetness);
-          if (r.tannin) setTannin(r.tannin);
-          if (r.acidity) setAcidity(r.acidity);
-          if (r.tastingNotesSummary) {
-            setPartner1Notes(`Sommelier: ${r.tastingNotesSummary}`);
-          }
-          setScanSource(data.source === 'gemini-ai' ? 'Gemini AI Sommelier' : 'Sommelier Label Vision');
-        }
-      } catch (err) {
-        console.error('Scan error:', err);
-      } finally {
-        setIsScanning(false);
-        setStep('details');
-      }
-    };
-    reader.readAsDataURL(file);
+  const applyScanResult = (r: WineScanResult) => {
+    // Only overwrite fields the scan actually found; blanks stay for manual entry.
+    if (r.name) setName(r.name);
+    if (r.producer) setProducer(r.producer);
+    if (r.vintage) setVintage(r.vintage);
+    if (r.type) setType(r.type);
+    if (r.grape) setGrape(r.grape);
+    if (r.region) setRegion(r.region);
+    if (r.country) setCountry(r.country);
+    if (r.abv) setAbv(r.abv);
+    if (r.suggestedAromas?.length) setSelectedAromas(r.suggestedAromas);
+    if (r.foodPairings?.length) setSelectedPairings(r.foodPairings);
+    if (r.body) setBody(r.body);
+    if (r.sweetness) setSweetness(r.sweetness);
+    if (r.tannin) setTannin(r.tannin);
+    if (r.acidity) setAcidity(r.acidity);
+    if (r.tastingNotesSummary) setJointNotes((prev) => prev || `Label: ${r.tastingNotesSummary}`);
   };
 
-  const handlePresetSample = (presetName: string, presetUrl: string) => {
-    setImageUrl(presetUrl);
+  const handleImageFile = async (file: File) => {
     setIsScanning(true);
-    setTimeout(() => {
-      if (presetName.includes('Malbec')) {
-        setName('High Mountain Vines Malbec');
-        setProducer('Catena Zapata');
-        setVintage('2021');
-        setType('red');
-        setGrape('Malbec');
-        setRegion('Mendoza');
-        setCountry('Argentina');
-        setAbv('13.5%');
-        setCoupleVerdict('good-value');
-        setSelectedAromas(['Dark Cherry', 'Vanilla', 'Chocolate', 'Oak']);
-        setStore('Waitrose');
-        setPrice('14.00');
-      } else if (presetName.includes('Sauvignon')) {
-        setName('Sauvignon Blanc');
-        setProducer('Cloudy Bay');
-        setVintage('2023');
-        setType('white');
-        setGrape('Sauvignon Blanc');
-        setRegion('Marlborough');
-        setCountry('New Zealand');
-        setAbv('13.0%');
-        setCoupleVerdict('loved-it');
-        setSelectedAromas(['Grapefruit', 'Peach', 'Mineral / Flint', 'Tropical Fruit']);
-        setStore('Majestic Wine');
-        setPrice('22.50');
-      } else {
-        setName('Côtes de Provence Rosé');
-        setProducer('Whispering Angel');
-        setVintage('2023');
-        setType('rose');
-        setGrape('Grenache blend');
-        setRegion('Provence');
-        setCountry('France');
-        setAbv('13.0%');
-        setCoupleVerdict('good');
-        setSelectedAromas(['Strawberry', 'Watermelon', 'Rose Petal']);
-        setStore('Marks & Spencer');
-        setPrice('18.50');
-      }
+    setScanSource(null);
+    setScanMessage(null);
+
+    let dataUrl: string;
+    try {
+      // The resized JPEG data URL is used for the preview and the scan, and is
+      // sent with the wine on save; the server writes it to the photos volume.
+      dataUrl = (await prepareBottlePhoto(file)).dataUrl;
+    } catch (err) {
+      console.error('Could not read photo:', err);
+      setScanMessage("Couldn't read that photo. Try another one, or enter the details by hand.");
       setIsScanning(false);
       setStep('details');
-    }, 1200);
+      return;
+    }
+    setImageUrl(dataUrl);
+
+    try {
+      const res = await fetch('/api/scan-wine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: dataUrl }),
+      });
+      const data = await res.json();
+      if (data.success && data.scanResult) {
+        applyScanResult(data.scanResult);
+        setScanSource('Gemini AI');
+      } else {
+        setScanMessage(data.error || 'Label scan was not available. Enter the details by hand.');
+      }
+    } catch (err) {
+      console.error('Scan error:', err);
+      setScanMessage('Label scan failed. Enter the details by hand.');
+    } finally {
+      setIsScanning(false);
+      setStep('details');
+    }
   };
 
   const handleSave = () => {
@@ -262,7 +224,7 @@ export function AddWineModal({
       region: region.trim(),
       country: country.trim(),
       abv: abv.trim(),
-      imageUrl: imageUrl || 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=800&auto=format&fit=crop&q=80',
+      imageUrl: imageUrl || undefined,
       coupleVerdict,
       averageRating: avgRating,
       tastedTogether,
@@ -317,7 +279,7 @@ export function AddWineModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
       <div 
-        className="w-full max-w-md max-h-[94vh] bg-[#0f0a0d] border border-champagne-500/25 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
+        className="w-full max-w-md max-h-[94dvh] bg-[#0f0a0d] border border-champagne-500/25 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -356,7 +318,9 @@ export function AddWineModal({
                   Capture the Wine Bottle Label
                 </h3>
                 <p className="text-xs text-stone-300 max-w-xs mx-auto leading-relaxed font-sans">
-                  Our sommelier vision engine will read the vintage label and extract producer, grape, region, and tasting notes.
+                  {settings.hasGeminiKey
+                    ? 'Gemini will read the label and fill in the producer, grape, region and vintage for you.'
+                    : 'Add a Gemini API key in Settings to fill in the details from the label automatically.'}
                 </p>
               </div>
 
@@ -369,7 +333,7 @@ export function AddWineModal({
                   <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-champagne-gold to-transparent shadow-[0_0_15px_#d4af37] animate-bounce top-1/3" />
                   <RefreshCw className="w-8 h-8 text-champagne-gold animate-spin mb-3 z-10" />
                   <span className="font-serif text-base font-semibold text-white z-10 tracking-wide">
-                    Analyzing Label with Sommelier AI...
+                    Reading the label...
                   </span>
                   <span className="text-xs text-champagne-200 mt-1 z-10 font-sans">
                     Extracting producer, varietal, vintage, and flavor bouquet...
@@ -410,42 +374,25 @@ export function AddWineModal({
                 accept="image/*"
                 capture="environment"
                 className="hidden"
-                onChange={(e) => e.target.files?.[0] && handleImageFile(e.target.files[0])}
+                onChange={(e) => {
+                  const picked = e.target.files?.[0];
+                  // Reset so choosing the same photo again still fires onChange.
+                  e.target.value = '';
+                  if (picked) handleImageFile(picked);
+                }}
               />
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(e) => e.target.files?.[0] && handleImageFile(e.target.files[0])}
+                onChange={(e) => {
+                  const picked = e.target.files?.[0];
+                  // Reset so choosing the same photo again still fires onChange.
+                  e.target.value = '';
+                  if (picked) handleImageFile(picked);
+                }}
               />
-
-              {/* Quick Sample Presets */}
-              <div className="pt-2">
-                <span className="text-xs uppercase tracking-wider font-sans font-semibold text-champagne-300 block mb-2 text-center">
-                  Or test with sample bottle:
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => handlePresetSample('Malbec', 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=800&auto=format&fit=crop&q=80')}
-                    className="p-2.5 rounded-xl bg-stone-900/70 hover:bg-stone-800 border border-white/10 text-center text-xs text-stone-200 font-sans font-medium transition-colors"
-                  >
-                    Mendoza Malbec
-                  </button>
-                  <button
-                    onClick={() => handlePresetSample('Sauvignon Blanc', 'https://images.unsplash.com/photo-1568213816046-0ee1c42bd559?w=800&auto=format&fit=crop&q=80')}
-                    className="p-2.5 rounded-xl bg-stone-900/70 hover:bg-stone-800 border border-white/10 text-center text-xs text-stone-200 font-sans font-medium transition-colors"
-                  >
-                    Marlborough Sauvignon
-                  </button>
-                  <button
-                    onClick={() => handlePresetSample('Rosé', 'https://images.unsplash.com/photo-1558001373-7b93ee48ffa0?w=800&auto=format&fit=crop&q=80')}
-                    className="p-2.5 rounded-xl bg-stone-900/70 hover:bg-stone-800 border border-white/10 text-center text-xs text-stone-200 font-sans font-medium transition-colors"
-                  >
-                    Provence Rosé
-                  </button>
-                </div>
-              </div>
 
               {/* Skip to manual entry */}
               <button
@@ -461,6 +408,18 @@ export function AddWineModal({
           {/* STEP 2: REVIEW DETAILS & COUPLE TASTING */}
           {step === 'details' && (
             <div className="space-y-4 animate-fadeIn">
+              {scanMessage && (
+                <div className="p-3 rounded-2xl bg-stone-900/90 border border-white/15 flex items-start justify-between gap-3 text-xs text-stone-200 font-sans">
+                  <span>{scanMessage}</span>
+                  <button
+                    onClick={() => setStep('photo')}
+                    className="text-xs underline text-champagne-gold font-semibold flex-shrink-0"
+                  >
+                    Retake
+                  </button>
+                </div>
+              )}
+
               {/* Scan Banner notification */}
               {scanSource && (
                 <div className="p-3 rounded-2xl bg-champagne-950/90 border border-champagne-500/35 flex items-center justify-between text-xs text-champagne-100 font-sans">
@@ -793,7 +752,7 @@ export function AddWineModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-champagne-500/15 bg-[#0f0a0d] flex items-center justify-between gap-3">
+        <div className="p-4 modal-footer-safe border-t border-champagne-500/15 bg-[#0f0a0d] flex items-center justify-between gap-3">
           {step === 'details' ? (
             <>
               <button

@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       aromaTags: body.aromaTags || [],
       foodPairings: body.foodPairings || [],
       purchase: {
-        store: body.purchase?.store || 'Local Store',
+        store: body.purchase?.store || '',
         price: Number(body.purchase?.price) || 0,
         currency: body.purchase?.currency || '£',
         date: body.purchase?.date || new Date().toISOString().split('T')[0],

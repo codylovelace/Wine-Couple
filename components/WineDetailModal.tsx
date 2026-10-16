@@ -34,22 +34,28 @@ export function WineDetailModal({
   const verdictConfig = VERDICTS[wine.coupleVerdict] || VERDICTS['good'];
 
   const handleShare = () => {
+    const bought = wine.purchase?.store
+      ? ` Bought at ${wine.purchase.store}${wine.purchase.price ? ` for ${wine.purchase.currency}${wine.purchase.price}` : ''}.`
+      : '';
+    const text = `We tasted ${wine.producer} ${wine.name} (${wine.vintage}): ${verdictConfig.label}, ${wine.averageRating}★.${bought}`;
+    // navigator.share and navigator.clipboard only exist on HTTPS (or localhost),
+    // so on a plain-HTTP LAN address fall back to a prompt the user can copy from.
     if (navigator.share) {
-      navigator.share({
-        title: `${wine.producer} - ${wine.name} (${wine.vintage})`,
-        text: `We tasted ${wine.name} (${verdictConfig.label}) and gave it ${wine.averageRating}★. Bought at ${wine.purchase?.store} for ${wine.purchase?.currency}${wine.purchase?.price}.`,
-        url: window.location.href,
-      }).catch(() => {});
+      navigator.share({ title: `${wine.producer} - ${wine.name} (${wine.vintage})`, text }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(
+        () => alert('Wine details copied to clipboard.'),
+        () => window.prompt('Copy the wine details:', text)
+      );
     } else {
-      navigator.clipboard.writeText(`${wine.producer} ${wine.name} (${wine.vintage}) - Rating: ${wine.averageRating}★, Verdict: ${verdictConfig.label}`);
-      alert('Wine details copied to clipboard.');
+      window.prompt('Copy the wine details:', text);
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
       <div 
-        className="w-full max-w-md max-h-[92vh] sm:max-h-[88vh] bg-[#0f0a0d] border border-champagne-500/25 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
+        className="w-full max-w-md max-h-[92dvh] sm:max-h-[88dvh] bg-[#0f0a0d] border border-champagne-500/25 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header with Image & Controls */}
@@ -199,7 +205,7 @@ export function WineDetailModal({
 
             <div className="flex items-center justify-between bg-black/70 p-3 rounded-xl border border-white/10">
               <div>
-                <p className="text-sm font-sans font-bold text-stone-100">{wine.purchase?.store || 'Local Store'}</p>
+                <p className="text-sm font-sans font-bold text-stone-100">{wine.purchase?.store || 'Not recorded'}</p>
                 {wine.purchase?.date && (
                   <p className="text-xs text-stone-300 flex items-center gap-1 mt-0.5 font-sans">
                     <Calendar className="w-3.5 h-3.5 text-stone-400" />
@@ -438,7 +444,7 @@ export function WineDetailModal({
         </div>
 
         {/* Modal Bottom Actions */}
-        <div className="p-3.5 border-t border-champagne-500/15 bg-[#0f0a0d] flex items-center justify-between gap-2.5">
+        <div className="p-3.5 modal-footer-safe border-t border-champagne-500/15 bg-[#0f0a0d] flex items-center justify-between gap-2.5">
           <button
             onClick={() => {
               if (confirm(`Are you sure you want to delete ${wine.name}?`)) {

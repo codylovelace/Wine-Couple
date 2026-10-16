@@ -76,6 +76,16 @@ export default function HomePage() {
     loadData();
   }, []);
 
+  const reloadWines = async () => {
+    try {
+      const res = await fetch('/api/wines');
+      const data = await res.json();
+      if (data.success && data.wines) setWines(data.wines);
+    } catch (err) {
+      console.error('Error reloading wines:', err);
+    }
+  };
+
   // Save new or edited wine
   const handleSaveWine = async (wine: Wine) => {
     setWines((prev) => {
@@ -89,13 +99,23 @@ export default function HomePage() {
     });
 
     try {
-      await fetch('/api/wines', {
+      const res = await fetch('/api/wines', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(wine),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success || !data.wine) {
+        throw new Error(data.error || `Server returned ${res.status}`);
+      }
+      // Use the server's copy: it swaps an inline photo for its /uploads/ URL.
+      const saved: Wine = data.wine;
+      setWines((prev) => prev.map((w) => (w.id === saved.id ? saved : w)));
+      setSelectedWine((current) => (current?.id === saved.id ? saved : current));
     } catch (err) {
       console.error('Error saving wine to API:', err);
+      alert(`"${wine.name}" was not saved: ${err instanceof Error ? err.message : 'network error'}. Reloading the cellar.`);
+      await reloadWines();
     }
   };
 
@@ -103,23 +123,29 @@ export default function HomePage() {
   const handleImportWines = async (imported: Wine[]) => {
     setWines(imported);
     try {
-      await fetch('/api/wines', {
+      const res = await fetch('/api/wines', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ wines: imported }),
       });
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
     } catch (err) {
       console.error('Error importing wines to API:', err);
+      alert('Import failed on the server. Reloading the cellar.');
     }
+    await reloadWines();
   };
 
   // Delete wine
   const handleDeleteWine = async (id: string) => {
     setWines((prev) => prev.filter((w) => w.id !== id));
     try {
-      await fetch(`/api/wines/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/wines/${id}`, { method: 'DELETE' });
+      if (!res.ok && res.status !== 404) throw new Error(`Server returned ${res.status}`);
     } catch (err) {
       console.error('Error deleting wine:', err);
+      alert('Delete failed on the server. Reloading the cellar.');
+      await reloadWines();
     }
   };
 
@@ -219,15 +245,21 @@ export default function HomePage() {
 
   // Save Settings
   const handleSaveSettings = async (newSettings: UserSettings) => {
-    setSettings(newSettings);
+    // Keep any typed API key out of client state; the server returns flags only.
+    const { geminiApiKey: _key, ...visible } = newSettings;
+    setSettings((prev) => ({ ...prev, ...visible }));
     try {
-      await fetch('/api/settings', {
+      const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newSettings),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || `Server returned ${res.status}`);
+      setSettings(data.settings);
     } catch (err) {
       console.error('Error saving settings:', err);
+      alert('Settings were not saved. Please try again.');
     }
   };
 
