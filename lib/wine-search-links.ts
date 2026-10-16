@@ -37,8 +37,3 @@ export const POPULAR_PAIRINGS = [
   "Duck Breast", "Wood-fired Pizza", "Tapas", "Dark Chocolate", "Spicy Asian Cuisine"
 ];
 
-export const COMMON_STORES = [
-  "Waitrose", "Marks & Spencer", "Sainsbury's", "Tesco", "Majestic Wine",
-  "Total Wine & More", "Trader Joe's", "Costco", "Whole Foods",
-  "Local Independent Wine Shop", "Direct from Winery / Vineyard", "Holiday / Abroad", "Restaurant"
-];

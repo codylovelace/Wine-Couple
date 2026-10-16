@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { PublicUser, VERDICTS, Wine, isTasted } from '@/lib/types';
 import { wineTitle } from '@/lib/format';
+import { canonicalShop, shopKey } from '@/lib/shops';
 import { WineCard } from '@/components/WineCard';
 import { ShoppingBag, ChevronRight, Star } from 'lucide-react';
 
@@ -11,21 +12,22 @@ interface ShoppingListProps {
   me: PublicUser;
   partner: PublicUser | null;
   onOpen: (wine: Wine) => void;
+  onShopClick: (shop: string) => void;
 }
 
 const NO_SHOP = 'Shop not recorded';
 
 // What to pick up next time you're out: wines worth buying again, grouped by
 // the shop you bought them in, and the wishlist of ones to try.
-export function ShoppingList({ wines, me, partner, onOpen }: ShoppingListProps) {
+export function ShoppingList({ wines, me, partner, onOpen, onShopClick }: ShoppingListProps) {
   const [view, setView] = useState<'again' | 'try'>('again');
 
   const groups = useMemo(() => {
     const byShop = new Map<string, { shop: string; wines: Wine[] }>();
     for (const w of wines) {
       if (!isTasted(w) || (w.coupleVerdict !== 'loved-it' && w.coupleVerdict !== 'good-value')) continue;
-      const shop = w.purchase?.store?.trim() || NO_SHOP;
-      const key = shop.toLowerCase();
+      const shop = canonicalShop(w.purchase?.store) || NO_SHOP;
+      const key = shop === NO_SHOP ? NO_SHOP : shopKey(shop);
       if (!byShop.has(key)) byShop.set(key, { shop, wines: [] });
       byShop.get(key)!.wines.push(w);
     }
@@ -72,10 +74,22 @@ export function ShoppingList({ wines, me, partner, onOpen }: ShoppingListProps) 
         ) : (
           groups.map((group) => (
             <section key={group.shop} className="space-y-2">
-              <h3 className="flex items-center gap-2 px-1 text-sm font-bold text-champagne-200">
-                <ShoppingBag className="w-4 h-4 text-champagne-gold" />
-                <span className="truncate">{group.shop}</span>
-                <span className="text-xs font-medium text-stone-400">{group.wines.length}</span>
+              <h3 className="px-1 text-sm font-bold text-champagne-200">
+                {group.shop === NO_SHOP ? (
+                  <span className="flex items-center gap-2">
+                    <ShoppingBag className="w-4 h-4 text-champagne-gold" />
+                    <span className="truncate">{group.shop}</span>
+                    <span className="text-xs font-medium text-stone-400">{group.wines.length}</span>
+                  </span>
+                ) : (
+                  // Opens everything bought there, not just the buy-again ones.
+                  <button onClick={() => onShopClick(group.shop)} className="flex items-center gap-2 max-w-full text-left">
+                    <ShoppingBag className="w-4 h-4 text-champagne-gold flex-shrink-0" />
+                    <span className="truncate underline decoration-champagne-500/50 underline-offset-4">{group.shop}</span>
+                    <span className="text-xs font-medium text-stone-400">{group.wines.length}</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-stone-500 flex-shrink-0" />
+                  </button>
+                )}
               </h3>
               <ul className="rounded-2xl luxury-card divide-y divide-white/10 overflow-hidden">
                 {group.wines.map((w) => {

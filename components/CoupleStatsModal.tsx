@@ -168,11 +168,11 @@ export function CoupleStatsModal({
                 className="p-3.5 rounded-2xl luxury-card flex items-center justify-between cursor-pointer hover:border-champagne-500/45 transition-all"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-black/60 border border-emerald-500/35 flex items-center justify-center text-emerald-300 text-[10px] font-sans font-bold tracking-wider">
+                  <div className="w-11 h-11 rounded-xl bg-black/60 border border-sky-500/35 flex items-center justify-center text-sky-300 text-[10px] font-sans font-bold tracking-wider">
                     VALUE
                   </div>
                   <div>
-                    <span className="text-[11px] font-sans uppercase tracking-wider text-emerald-300 font-semibold block">
+                    <span className="text-[11px] font-sans uppercase tracking-wider text-sky-300 font-semibold block">
                       Value Distinction
                     </span>
                     <h4 className="text-sm font-serif font-semibold text-stone-100 truncate max-w-[190px]">

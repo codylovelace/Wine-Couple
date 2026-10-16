@@ -17,7 +17,8 @@ import { WineSubmission, api, isAbort, retryWhileBusy } from '@/lib/api-client';
 import { StillTrying } from '@/components/StillTrying';
 import { SwipeVerdict, SwipeChoice } from '@/components/SwipeVerdict';
 import { X, Camera, Upload, Sparkles, Star, Store, Check, RefreshCw, ChevronRight, Heart } from 'lucide-react';
-import { POPULAR_AROMAS, COMMON_STORES } from '@/lib/wine-search-links';
+import { POPULAR_AROMAS } from '@/lib/wine-search-links';
+import { ShopPicker } from '@/components/ShopPicker';
 import { prepareBottlePhoto } from '@/lib/client-image';
 
 interface AddWineModalProps {
@@ -32,6 +33,8 @@ interface AddWineModalProps {
   draft?: Partial<Wine> | null;
   // Resolves when saved; throws with a message to show if it wasn't.
   onSubmit: (submission: WineSubmission, existingId?: string) => Promise<void>;
+  // Shops you've used before that aren't in the dropdown's main list.
+  customShops: string[];
 }
 
 const today = () => new Date().toISOString().split('T')[0];
@@ -40,7 +43,7 @@ const inputClass =
   'w-full mt-1 px-3 py-2.5 rounded-xl bg-black/70 border border-white/15 text-sm text-white focus:outline-none focus:border-champagne-gold font-sans';
 const labelClass = 'text-[11px] text-stone-300 uppercase font-sans font-medium tracking-wider';
 
-export function AddWineModal({ isOpen, onClose, me, partner, settings, editingWine, draft, onSubmit }: AddWineModalProps) {
+export function AddWineModal({ isOpen, onClose, me, partner, settings, editingWine, draft, onSubmit, customShops }: AddWineModalProps) {
   // photo -> your swipe -> details
   const [step, setStep] = useState<'photo' | 'verdict' | 'details'>('photo');
   const [isScanning, setIsScanning] = useState(false);
@@ -648,23 +651,15 @@ export function AddWineModal({ isOpen, onClose, me, partner, settings, editingWi
                   <Store className="w-3.5 h-3.5 text-champagne-gold" />
                   <span>Where you bought it</span>
                 </h3>
-                <label className="block">
+                <div>
                   <span className={labelClass}>Shop</span>
-                  <input type="text" value={store} onChange={(e) => setStore(e.target.value)} placeholder="e.g. Waitrose" className={inputClass} />
-                </label>
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                  {COMMON_STORES.slice(0, 6).map((st) => (
-                    <button
-                      key={st}
-                      type="button"
-                      onClick={() => setStore(st)}
-                      className={`text-xs px-2.5 py-1 rounded-lg border whitespace-nowrap ${
-                        store === st ? 'bg-champagne-950 text-champagne-accent border-champagne-500/50 font-bold' : 'bg-black/70 text-stone-300 border-white/10'
-                      }`}
-                    >
-                      {st}
-                    </button>
-                  ))}
+                  <ShopPicker
+                    value={store}
+                    onChange={setStore}
+                    customShops={customShops}
+                    selectClass={inputClass}
+                    inputClass={inputClass}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-2.5">
                   <label>

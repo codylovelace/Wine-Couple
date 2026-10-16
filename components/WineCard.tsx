@@ -4,6 +4,7 @@ import React from 'react';
 import { Wine, VERDICTS, PublicUser, isTasted, partnersDisagree } from '@/lib/types';
 import { awaitingRating, reviewFor } from '@/lib/wine-logic';
 import { wineTitle } from '@/lib/format';
+import { canonicalShop } from '@/lib/shops';
 import { Star, MapPin, ShoppingBag, Wine as WineIcon, Heart, X, MessageCircle } from 'lucide-react';
 
 interface WineCardProps {
@@ -11,22 +12,24 @@ interface WineCardProps {
   me: PublicUser;
   partner: PublicUser | null;
   onClick: () => void;
+  // Tapping the shop chip lists every wine bought there.
+  onShopClick?: (shop: string) => void;
 }
 
-export function WineCard({ wine, me, partner, onClick }: WineCardProps) {
+export function WineCard({ wine, me, partner, onClick, onShopClick }: WineCardProps) {
   const verdictConfig = VERDICTS[wine.coupleVerdict] || VERDICTS['okay'];
   const tasted = isTasted(wine);
   const myTurn = awaitingRating(wine, me.slot);
   const partnerPending = partner ? awaitingRating(wine, partner.slot) : false;
   const commentCount = wine.comments?.length ?? 0;
   const { title, subtitle } = wineTitle(wine);
+  const shop = canonicalShop(wine.purchase?.store);
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="block w-full text-left luxury-card p-4 rounded-3xl active:scale-[0.99] transition-all cursor-pointer hover:border-champagne-500/40 group relative overflow-hidden"
-    >
+    // The whole card opens the wine through a button stretched over it; the
+    // shop chip is its own button on top (buttons can't be nested).
+    <div className="w-full text-left luxury-card p-4 rounded-3xl active:scale-[0.99] transition-all hover:border-champagne-500/40 group relative overflow-hidden">
+      <button type="button" onClick={onClick} aria-label={`Open ${title}`} className="absolute inset-0 z-0 rounded-3xl cursor-pointer" />
       <div className="flex gap-4">
         {/* Wine Bottle Image Thumbnail */}
         <div className="relative w-20 h-28 flex-shrink-0 rounded-2xl overflow-hidden bg-black border border-champagne-500/20 flex items-center justify-center shadow-inner group-hover:border-champagne-500/40 transition-colors">
@@ -96,11 +99,23 @@ export function WineCard({ wine, me, partner, onClick }: WineCardProps) {
           <div className="mt-3 pt-2.5 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 font-sans">
             {/* Where Bought & Price */}
             <div className="flex items-center gap-2 text-xs">
-              {wine.purchase?.store ? (
-                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-stone-900/90 text-stone-200 font-medium border border-white/10 text-xs">
-                  <ShoppingBag className="w-3 h-3 text-champagne-400" />
-                  <span className="truncate max-w-[95px]">{wine.purchase.store}</span>
-                </span>
+              {shop ? (
+                onShopClick ? (
+                  <button
+                    type="button"
+                    onClick={() => onShopClick(shop)}
+                    aria-label={`All wines from ${shop}`}
+                    className="relative z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-stone-900/90 text-stone-200 font-medium border border-white/10 text-xs underline-offset-2 hover:underline hover:border-champagne-500/40"
+                  >
+                    <ShoppingBag className="w-3 h-3 text-champagne-400" />
+                    <span className="truncate max-w-[95px]">{shop}</span>
+                  </button>
+                ) : (
+                  <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-stone-900/90 text-stone-200 font-medium border border-white/10 text-xs">
+                    <ShoppingBag className="w-3 h-3 text-champagne-400" />
+                    <span className="truncate max-w-[95px]">{shop}</span>
+                  </span>
+                )
               ) : null}
               {wine.purchase?.price ? (
                 <span className="font-sans font-bold text-champagne-accent text-sm">
@@ -123,7 +138,7 @@ export function WineCard({ wine, me, partner, onClick }: WineCardProps) {
                 </span>
               )}
               {!myTurn && partnerPending && partner && (
-                <span className="px-2 py-0.5 rounded-md bg-black/70 border border-white/15 text-stone-300">
+                <span className="px-2 py-0.5 rounded-md bg-yellow-950 border border-yellow-400/50 text-yellow-100 font-semibold">
                   Waiting for {partner.name}
                 </span>
               )}
@@ -148,6 +163,6 @@ export function WineCard({ wine, me, partner, onClick }: WineCardProps) {
           </div>
         </div>
       </div>
-    </button>
+    </div>
   );
 }

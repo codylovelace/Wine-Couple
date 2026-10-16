@@ -14,6 +14,7 @@ Built with Next.js, stored as JSON files plus photos on Docker volumes, and desi
 - **Where you bought it and for how much**, plus search links (Wine-Searcher, Vivino, Google Shopping) to find it again.
 - **For You suggestions**: with a Gemini key, suggestions based on the wines you both liked (and away from ones you both disliked). They're cached and refreshed when your shared likes change, or on demand.
 - **More like this**: on any wine, tap to have Gemini suggest a few wines with a similar taste. The last set is saved per wine, so reopening it costs nothing.
+- **Shops**: pick the shop from a list of UK supermarkets (or Custom for anywhere else; custom shops you've used are offered next time). Tap a shop anywhere to see every wine you've bought there and what you've spent.
 - **Shopping list**: everything marked *Must Buy Again* or *Great Value*, grouped by the shop you bought it in, plus a wishlist of wines to try.
 - **Couple stats.**
 - **Backup and restore** of every wine, rating and comment as JSON from Settings (photos are not included; back up the photos volume for those).
