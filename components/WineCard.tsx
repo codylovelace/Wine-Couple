@@ -51,7 +51,7 @@ export function WineCard({
             {/* Top row: Verdict Badge & Star Rating */}
             <div className="flex items-center justify-between gap-1 mb-1.5">
               <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-sans font-semibold tracking-wide uppercase border ${verdictConfig.bgClass} ${verdictConfig.colorClass} ${verdictConfig.borderClass}`}
+                className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-sans font-semibold tracking-wide uppercase border ${verdictConfig.bgClass} ${verdictConfig.colorClass} ${verdictConfig.borderClass}`}
               >
                 <span>{verdictConfig.shortLabel}</span>
               </span>
@@ -84,10 +84,12 @@ export function WineCard({
           <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between gap-2 font-sans">
             {/* Where Bought & Price */}
             <div className="flex items-center gap-2 text-xs">
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-stone-900/90 text-stone-200 font-medium border border-white/10 text-xs">
-                <ShoppingBag className="w-3 h-3 text-champagne-400" />
-                <span className="truncate max-w-[95px]">{wine.purchase?.store || 'Store'}</span>
-              </span>
+              {wine.purchase?.store ? (
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-stone-900/90 text-stone-200 font-medium border border-white/10 text-xs">
+                  <ShoppingBag className="w-3 h-3 text-champagne-400" />
+                  <span className="truncate max-w-[95px]">{wine.purchase.store}</span>
+                </span>
+              ) : null}
               {wine.purchase?.price ? (
                 <span className="font-sans font-bold text-champagne-accent text-sm">
                   {wine.purchase.currency || '£'}{Number(wine.purchase.price).toFixed(2)}

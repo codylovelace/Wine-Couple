@@ -149,7 +149,11 @@ export interface UserSettings {
   partner1Avatar: string;
   partner2Avatar: string;
   defaultCurrency: string;
+  // Only ever present server-side; the API strips it before responding.
   geminiApiKey?: string;
+  // Set by the API for the browser instead of the key itself.
+  hasGeminiKey?: boolean;
+  geminiKeyFromEnv?: boolean;
 }
 
 export interface WineScanResult {

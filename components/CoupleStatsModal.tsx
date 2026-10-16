@@ -69,7 +69,7 @@ export function CoupleStatsModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
       <div 
-        className="w-full max-w-md max-h-[90vh] bg-[#0f0a0d] border border-champagne-500/25 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
+        className="w-full max-w-md max-h-[90dvh] bg-[#0f0a0d] border border-champagne-500/25 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -232,7 +232,7 @@ export function CoupleStatsModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-champagne-500/15 bg-[#0f0a0d]">
+        <div className="p-4 modal-footer-safe border-t border-champagne-500/15 bg-[#0f0a0d]">
           <button
             onClick={onClose}
             className="w-full py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-stone-100 text-xs font-sans font-bold tracking-wide border border-white/15"

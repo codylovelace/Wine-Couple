@@ -32,9 +32,15 @@ input, textarea, select {
   -webkit-user-select: text;
 }
 
-/* iOS Safe Areas */
+/* iOS Safe Areas: max() keeps a minimum gap on phones without a home indicator,
+   where env() resolves to 0 rather than falling back. */
 .pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 1.25rem);
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+/* Bottom-sheet modal footers sit under the iPhone home indicator. */
+.modal-footer-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
 .pt-safe {

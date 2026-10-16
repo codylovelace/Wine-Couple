@@ -1,121 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { WineScanResult, WineType, Verdict } from '@/lib/types';
+import { WineScanResult, WineType, Verdict, VERDICTS } from '@/lib/types';
 import { getSettings } from '@/lib/db';
 
-const WINE_KNOWLEDGE_PRESETS: WineScanResult[] = [
-  {
-    name: 'Reserve Cabernet Sauvignon',
-    producer: 'Robert Mondavi Winery',
-    vintage: '2020',
-    type: 'red',
-    grape: 'Cabernet Sauvignon',
-    region: 'Napa Valley, California',
-    country: 'USA',
-    abv: '14.5%',
-    suggestedVerdict: 'loved-it',
-    suggestedAromas: ['Dark Cherry', 'Oak', 'Vanilla', 'Blackberry', 'Cedar'],
-    tastingNotesSummary: 'Intense dark berry fruits with layers of sweet oak, cocoa, and refined structured tannins.',
-    body: 5,
-    sweetness: 1,
-    tannin: 4,
-    acidity: 3,
-    foodPairings: ['Ribeye Steak', 'Roast Lamb', 'Charcuterie & Cheese'],
-    confidenceScore: 0.96,
-  },
-  {
-    name: 'Sanctuary Pinot Noir',
-    producer: 'Ponga / Marlborough Vineyards',
-    vintage: '2022',
-    type: 'red',
-    grape: 'Pinot Noir',
-    region: 'Marlborough',
-    country: 'New Zealand',
-    abv: '13.0%',
-    suggestedVerdict: 'good-value',
-    suggestedAromas: ['Raspberry', 'Plum', 'Floral', 'Earthy'],
-    tastingNotesSummary: 'Silky and bright with ripe red cherries, subtle spice, and lingering elegant freshness.',
-    body: 3,
-    sweetness: 1,
-    tannin: 2,
-    acidity: 4,
-    foodPairings: ['Duck Breast', 'Grilled Salmon', 'Creamy Pasta'],
-    confidenceScore: 0.94,
-  },
-  {
-    name: 'Gavi di Gavi DOCG',
-    producer: 'Villa Sparina',
-    vintage: '2023',
-    type: 'white',
-    grape: 'Cortese',
-    region: 'Piedmont',
-    country: 'Italy',
-    abv: '12.5%',
-    suggestedVerdict: 'good',
-    suggestedAromas: ['Peach', 'Lemon / Citrus', 'Mineral / Flint', 'Floral'],
-    tastingNotesSummary: 'Crisp, aromatic white wine with yellow peach, zesty lemon, and crushed stone minerality.',
-    body: 2,
-    sweetness: 1,
-    tannin: 1,
-    acidity: 4,
-    foodPairings: ['Seafood / Oysters', 'Tapas', 'Creamy Pasta'],
-    confidenceScore: 0.95,
-  },
-  {
-    name: 'Rioja Reserva',
-    producer: 'Marqués de Riscal',
-    vintage: '2018',
-    type: 'red',
-    grape: 'Tempranillo, Graciano',
-    region: 'Rioja',
-    country: 'Spain',
-    abv: '14.0%',
-    suggestedVerdict: 'good-value',
-    suggestedAromas: ['Vanilla', 'Oak', 'Leather', 'Dark Cherry', 'Tobacco'],
-    tastingNotesSummary: 'Classic Rioja Reserva aged in American oak. Velvety balsamic notes with ripe plum and leather.',
-    body: 4,
-    sweetness: 1,
-    tannin: 3,
-    acidity: 3,
-    foodPairings: ['Roast Lamb', 'Tapas', 'Charcuterie & Cheese'],
-    confidenceScore: 0.97,
-  },
-  {
-    name: 'Chablis Premier Cru',
-    producer: 'Domaine William Fèvre',
-    vintage: '2022',
-    type: 'white',
-    grape: 'Chardonnay',
-    region: 'Burgundy',
-    country: 'France',
-    abv: '13.0%',
-    suggestedVerdict: 'special-occasion',
-    suggestedAromas: ['Green Apple', 'Mineral / Flint', 'Lemon / Citrus', 'Floral'],
-    tastingNotesSummary: 'Steely, chalky minerality with razor-sharp citrus precision and pure green apple elegance.',
-    body: 3,
-    sweetness: 1,
-    tannin: 1,
-    acidity: 5,
-    foodPairings: ['Seafood / Oysters', 'Grilled Salmon'],
-    confidenceScore: 0.98,
-  }
-];
+// gemini-flash-latest is Google's rolling alias for the current Flash model,
+// so the scanner keeps working as individual model versions are retired.
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { imageBase64, userKey, fileName } = body;
+const WINE_TYPES: WineType[] = ['red', 'white', 'rose', 'sparkling', 'dessert', 'orange'];
 
-    const settings = await getSettings();
-    const apiKey = userKey || settings.geminiApiKey || process.env.GEMINI_API_KEY;
+function str(v: unknown): string {
+  return typeof v === 'string' ? v.trim() : '';
+}
 
-    // If Gemini API Key is provided, call Gemini Vision
-    if (apiKey && imageBase64) {
-      try {
-        const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
-        const mimeMatch = imageBase64.match(/^data:(image\/\w+);base64,/);
-        const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+function scale(v: unknown): number | undefined {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 1 && n <= 5 ? Math.round(n) : undefined;
+}
 
-        const prompt = `You are an expert master sommelier and wine label recognition system.
+function strList(v: unknown): string[] | undefined {
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '') : undefined;
+}
+
+// The model's JSON is untrusted: keep only fields of the right shape so a
+// malformed answer can't put garbage into the form.
+function sanitize(raw: Record<string, unknown>): WineScanResult {
+  const type = str(raw.type).toLowerCase() as WineType;
+  const verdict = str(raw.suggestedVerdict) as Verdict;
+  return {
+    name: str(raw.name),
+    producer: str(raw.producer),
+    vintage: str(raw.vintage),
+    type: WINE_TYPES.includes(type) ? type : 'red',
+    grape: str(raw.grape),
+    region: str(raw.region),
+    country: str(raw.country),
+    abv: str(raw.abv),
+    suggestedVerdict: verdict in VERDICTS ? verdict : undefined,
+    suggestedAromas: strList(raw.suggestedAromas),
+    tastingNotesSummary: str(raw.tastingNotesSummary) || undefined,
+    body: scale(raw.body),
+    sweetness: scale(raw.sweetness),
+    tannin: scale(raw.tannin),
+    acidity: scale(raw.acidity),
+    foodPairings: strList(raw.foodPairings),
+  };
+}
+
+const PROMPT = `You are an expert master sommelier and wine label recognition system.
 Analyze this wine bottle / label photo and extract all key information into structured JSON.
 Return ONLY valid JSON matching this schema:
 {
@@ -127,7 +58,6 @@ Return ONLY valid JSON matching this schema:
   "region": "Region/Appellation (e.g. Marlborough, Rioja, Bordeaux, Napa Valley)",
   "country": "Country of origin (e.g. France, Italy, New Zealand, USA, Spain, Argentina)",
   "abv": "Alcohol percentage (e.g. '13.5%')",
-  "suggestedVerdict": "good-value" | "loved-it" | "good" | "okay" | "bad" | "special-occasion",
   "suggestedAromas": ["Dark Cherry", "Vanilla", "Oak"],
   "tastingNotesSummary": "1-2 sentence description of wine style, flavors, and profile",
   "body": 1-5 (1 light, 5 full),
@@ -137,82 +67,90 @@ Return ONLY valid JSON matching this schema:
   "foodPairings": ["Steak", "Pasta"]
 }`;
 
-        const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [
-                    { text: prompt },
-                    {
-                      inlineData: {
-                        mimeType: mimeType,
-                        data: cleanBase64,
-                      },
-                    },
-                  ],
-                },
-              ],
-              generationConfig: {
-                responseMimeType: 'application/json',
-                temperature: 0.2,
-              },
-            }),
-          }
-        );
+export async function POST(request: NextRequest) {
+  let imageBase64: unknown;
+  try {
+    ({ imageBase64 } = await request.json());
+  } catch {
+    return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
+  }
+  if (typeof imageBase64 !== 'string' || !imageBase64) {
+    return NextResponse.json({ success: false, error: 'No image provided' }, { status: 400 });
+  }
 
-        if (geminiRes.ok) {
-          const data = await geminiRes.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-            const parsed = JSON.parse(text) as WineScanResult;
-            parsed.confidenceScore = 0.98;
-            return NextResponse.json({ success: true, scanResult: parsed, source: 'gemini-ai' });
-          }
-        } else {
-          console.warn('Gemini API call failed with status:', geminiRes.status, await geminiRes.text());
-        }
-      } catch (geminiError) {
-        console.error('Error invoking Gemini Vision API:', geminiError);
-      }
-    }
-
-    // Heuristic Smart Fallback: Pick or synthesize a realistic wine based on photo analysis/seed presets
-    const randomIndex = Math.floor(Math.random() * WINE_KNOWLEDGE_PRESETS.length);
-    const chosenPreset = { ...WINE_KNOWLEDGE_PRESETS[randomIndex] };
-
-    // If fileName has hints (e.g. "rioja", "chablis", "sauvignon", "pinot")
-    if (fileName) {
-      const lower = fileName.toLowerCase();
-      const match = WINE_KNOWLEDGE_PRESETS.find(
-        (p) =>
-          lower.includes(p.grape.toLowerCase()) ||
-          lower.includes(p.name.toLowerCase()) ||
-          lower.includes(p.type.toLowerCase()) ||
-          lower.includes(p.region.toLowerCase())
-      );
-      if (match) {
-        return NextResponse.json({
-          success: true,
-          scanResult: { ...match, confidenceScore: 0.95 },
-          source: 'smart-vision-parser',
-        });
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      scanResult: chosenPreset,
-      source: 'smart-vision-parser',
-    });
-  } catch (error) {
-    console.error('Scan wine API error:', error);
+  const settings = await getSettings();
+  const apiKey = settings.geminiApiKey || process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    // No key means no scanner. Say so instead of guessing, so the form is
+    // left for manual entry rather than filled with a wine we made up.
     return NextResponse.json(
-      { success: false, error: 'Failed to analyze wine label image' },
-      { status: 500 }
+      {
+        success: false,
+        reason: 'no-key',
+        error: 'Label scanning needs a Gemini API key (Settings, or GEMINI_API_KEY on the server). Fill in the details by hand for now.',
+      },
+      { status: 200 }
+    );
+  }
+
+  const mimeMatch = imageBase64.match(/^data:(image\/[\w.+-]+);base64,/);
+  const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const cleanBase64 = imageBase64.replace(/^data:image\/[\w.+-]+;base64,/, '');
+
+  try {
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Header rather than ?key= so the key never lands in URL logs.
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: PROMPT }, { inlineData: { mimeType, data: cleanBase64 } }] }],
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
+        }),
+        signal: AbortSignal.timeout(45_000),
+      }
+    );
+
+    if (!geminiRes.ok) {
+      const detail = await geminiRes.text();
+      console.warn(`Gemini (${GEMINI_MODEL}) returned ${geminiRes.status}:`, detail);
+      const hint =
+        geminiRes.status === 400 || geminiRes.status === 403
+          ? 'Gemini rejected the request. Check the API key in Settings.'
+          : geminiRes.status === 404
+            ? `Gemini model "${GEMINI_MODEL}" was not found. Set GEMINI_MODEL to a current model.`
+            : geminiRes.status === 429
+              ? 'Gemini rate limit reached. Try again in a minute.'
+              : `Gemini returned an error (${geminiRes.status}).`;
+      return NextResponse.json({ success: false, reason: 'ai-error', error: hint }, { status: 200 });
+    }
+
+    const data = await geminiRes.json();
+    const text: string | undefined = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      return NextResponse.json(
+        { success: false, reason: 'ai-error', error: "Gemini couldn't read a label in that photo." },
+        { status: 200 }
+      );
+    }
+
+    const scanResult = sanitize(JSON.parse(text));
+    if (!scanResult.name && !scanResult.producer) {
+      return NextResponse.json(
+        { success: false, reason: 'no-label', error: "Couldn't find a wine label in that photo. Try a closer, straight-on shot." },
+        { status: 200 }
+      );
+    }
+    return NextResponse.json({ success: true, scanResult, source: 'gemini-ai' });
+  } catch (error) {
+    console.error('Error invoking Gemini Vision API:', error);
+    return NextResponse.json(
+      { success: false, reason: 'ai-error', error: 'Label scan failed. Fill in the details by hand, or try again.' },
+      { status: 200 }
     );
   }
 }

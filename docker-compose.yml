@@ -1,15 +1,23 @@
+# Portainer stack: Stacks > Add stack > Web editor, paste this file.
+# The image is built and published by GitHub Actions on every push to main
+# (.github/workflows/docker-publish.yml). See README for the one-time
+# ghcr.io registry setup in Portainer.
 services:
-  vino-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: vino-wine-journal
+  wine-couple:
+    image: ghcr.io/codylovelace/wine-couple:latest
+    container_name: wine-couple
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${WINE_PORT:-3000}:3000"
     environment:
-      - NODE_ENV=production
+      - TZ=${TZ:-Europe/London}
+      # Optional: enables label scanning. Can also be set in the app's Settings.
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-flash-latest}
     volumes:
-      - ./data:/app/data
-      - ./public/uploads:/app/public/uploads
+      - wine-data:/app/data
+      - wine-photos:/app/uploads
+
+volumes:
+  wine-data:
+  wine-photos:

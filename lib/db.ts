@@ -1,9 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import { Wine, UserSettings, Verdict, WineScanResult } from './types';
+import { Wine, UserSettings } from './types';
 import { generateWineBuyLinks } from './wine-search-links';
+import { DATA_DIR } from './paths';
+import { saveDataUrlImage, deleteUploadedImage } from './uploads';
 
-const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 const WINES_FILE = path.join(DATA_DIR, 'wines.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 
@@ -15,282 +16,14 @@ const DEFAULT_SETTINGS: UserSettings = {
   defaultCurrency: '£',
 };
 
-const SEED_WINES: Wine[] = [
-  {
-    id: 'wine-1',
-    name: 'High Mountain Vines Malbec',
-    producer: 'Catena Zapata',
-    vintage: '2021',
-    type: 'red',
-    grape: 'Malbec',
-    region: 'Mendoza',
-    country: 'Argentina',
-    abv: '13.5%',
-    imageUrl: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=800&auto=format&fit=crop&q=80',
-    coupleVerdict: 'good-value',
-    averageRating: 4.5,
-    tastedTogether: true,
-    partner1Review: {
-      tasterName: 'Cody',
-      rating: 4.5,
-      verdict: 'good-value',
-      notes: 'Rich plum and dark chocolate notes. Velvety smooth finish for under fifteen pounds.',
-      aromas: ['Dark Cherry', 'Vanilla', 'Chocolate', 'Oak'],
-      date: '2026-08-10',
-    },
-    partner2Review: {
-      tasterName: 'Jess',
-      rating: 4.5,
-      verdict: 'good-value',
-      notes: 'Loved this with our steak dinner. Very smooth tannins, balanced finish.',
-      aromas: ['Blackberry', 'Vanilla'],
-      date: '2026-08-10',
-    },
-    jointNotes: 'An absolute staple. Buy 3 more bottles on our next store visit.',
-    body: 4,
-    sweetness: 1,
-    tannin: 3,
-    acidity: 2,
-    aromaTags: ['Dark Cherry', 'Vanilla', 'Chocolate', 'Oak', 'Blackberry'],
-    foodPairings: ['Ribeye Steak', 'Charcuterie & Cheese'],
-    purchase: {
-      store: 'Waitrose',
-      price: 13.99,
-      currency: '£',
-      date: '2026-08-09',
-      isSpecialOffer: true,
-      notes: '25% off 6 bottles promotion',
-    },
-    onlineLinks: {
-      wineSearcher: 'https://www.wine-searcher.com/find/catena+zapata+malbec+2021',
-      vivino: 'https://www.vivino.com/search/wines?q=Catena+Zapata+Malbec+2021',
-      googleShopping: 'https://www.google.com/search?tbm=shop&q=Catena+Zapata+Malbec+2021+buy+online',
-      supermarketSearch: 'https://www.google.com/search?q=Catena+Zapata+Malbec+2021+supermarket+price',
-    },
-    favorite: true,
-    wishlist: false,
-    createdAt: '2026-08-10T19:30:00.000Z',
-    updatedAt: '2026-08-10T19:30:00.000Z',
-  },
-  {
-    id: 'wine-2',
-    name: 'Sauvignon Blanc',
-    producer: 'Cloudy Bay',
-    vintage: '2023',
-    type: 'white',
-    grape: 'Sauvignon Blanc',
-    region: 'Marlborough',
-    country: 'New Zealand',
-    abv: '13.0%',
-    imageUrl: 'https://images.unsplash.com/photo-1568213816046-0ee1c42bd559?w=800&auto=format&fit=crop&q=80',
-    coupleVerdict: 'loved-it',
-    averageRating: 4.8,
-    tastedTogether: true,
-    partner1Review: {
-      tasterName: 'Cody',
-      rating: 5.0,
-      verdict: 'loved-it',
-      notes: 'Expressive tropical aromas. Passion fruit, lime zest and clean flinty minerality.',
-      aromas: ['Grapefruit', 'Peach', 'Mineral / Flint', 'Tropical Fruit'],
-      date: '2026-08-02',
-    },
-    partner2Review: {
-      tasterName: 'Jess',
-      rating: 4.5,
-      verdict: 'loved-it',
-      notes: 'Incredible aroma from the first pour. Crisp, refreshing terrace wine.',
-      aromas: ['Citrus', 'Peach'],
-      date: '2026-08-02',
-    },
-    jointNotes: 'Our go-to white wine for celebratory dinners.',
-    body: 2,
-    sweetness: 1,
-    tannin: 1,
-    acidity: 5,
-    aromaTags: ['Grapefruit', 'Peach', 'Mineral / Flint', 'Tropical Fruit', 'Lemon / Citrus'],
-    foodPairings: ['Seafood / Oysters', 'Grilled Salmon', 'Tapas'],
-    purchase: {
-      store: 'Majestic Wine',
-      price: 24.50,
-      currency: '£',
-      date: '2026-08-01',
-      notes: 'Anniversary celebration',
-    },
-    onlineLinks: {
-      wineSearcher: 'https://www.wine-searcher.com/find/cloudy+bay+sauvignon+blanc+2023',
-      vivino: 'https://www.vivino.com/search/wines?q=Cloudy+Bay+Sauvignon+Blanc+2023',
-      googleShopping: 'https://www.google.com/search?tbm=shop&q=Cloudy+Bay+Sauvignon+Blanc+2023+buy+online',
-      supermarketSearch: 'https://www.google.com/search?q=Cloudy+Bay+Sauvignon+Blanc+2023+supermarket+price',
-    },
-    favorite: true,
-    wishlist: false,
-    createdAt: '2026-08-02T18:00:00.000Z',
-    updatedAt: '2026-08-02T18:00:00.000Z',
-  },
-  {
-    id: 'wine-3',
-    name: 'Côtes de Provence Rosé',
-    producer: 'Whispering Angel (Château d\'Esclans)',
-    vintage: '2023',
-    type: 'rose',
-    grape: 'Grenache, Cinsault, Vermentino',
-    region: 'Provence',
-    country: 'France',
-    abv: '13.0%',
-    imageUrl: 'https://images.unsplash.com/photo-1558001373-7b93ee48ffa0?w=800&auto=format&fit=crop&q=80',
-    coupleVerdict: 'good',
-    averageRating: 4.0,
-    tastedTogether: true,
-    partner1Review: {
-      tasterName: 'Cody',
-      rating: 3.5,
-      verdict: 'good',
-      notes: 'Pale, crisp and refreshing. Well balanced acidity.',
-      aromas: ['Strawberry', 'Watermelon', 'Floral'],
-      date: '2026-07-24',
-    },
-    partner2Review: {
-      tasterName: 'Jess',
-      rating: 4.5,
-      verdict: 'loved-it',
-      notes: 'Light and crisp red berry flavours. Ideal summer rosé.',
-      aromas: ['Strawberry', 'Rose Petal'],
-      date: '2026-07-24',
-    },
-    jointNotes: 'Great pairing for summer barbecues.',
-    body: 2,
-    sweetness: 1,
-    tannin: 1,
-    acidity: 4,
-    aromaTags: ['Strawberry', 'Watermelon', 'Rose Petal', 'Crisp Apple'],
-    foodPairings: ['Tapas', 'Charcuterie & Cheese', 'Grilled Salmon'],
-    purchase: {
-      store: 'Marks & Spencer',
-      price: 19.00,
-      currency: '£',
-      date: '2026-07-24',
-    },
-    onlineLinks: {
-      wineSearcher: 'https://www.wine-searcher.com/find/whispering+angel+rose+2023',
-      vivino: 'https://www.vivino.com/search/wines?q=Whispering+Angel+Rose+2023',
-      googleShopping: 'https://www.google.com/search?tbm=shop&q=Whispering+Angel+Rose+2023+buy+online',
-      supermarketSearch: 'https://www.google.com/search?q=Whispering+Angel+Rose+2023+supermarket+price',
-    },
-    favorite: false,
-    wishlist: false,
-    createdAt: '2026-07-24T20:15:00.000Z',
-    updatedAt: '2026-07-24T20:15:00.000Z',
-  },
-  {
-    id: 'wine-4',
-    name: 'Yellow Tail Shiraz',
-    producer: 'Casella Family Brands',
-    vintage: '2022',
-    type: 'red',
-    grape: 'Shiraz / Syrah',
-    region: 'South Eastern Australia',
-    country: 'Australia',
-    abv: '13.5%',
-    imageUrl: 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=800&auto=format&fit=crop&q=80',
-    coupleVerdict: 'bad',
-    averageRating: 1.8,
-    tastedTogether: true,
-    partner1Review: {
-      tasterName: 'Cody',
-      rating: 2.0,
-      verdict: 'bad',
-      notes: 'Overly jammy flavour, lack of structure. Won\'t repurchase.',
-      aromas: ['Plum'],
-      date: '2026-07-15',
-    },
-    partner2Review: {
-      tasterName: 'Jess',
-      rating: 1.5,
-      verdict: 'bad',
-      notes: 'Too syrupy and unbalanced.',
-      aromas: [],
-      date: '2026-07-15',
-    },
-    jointNotes: 'Avoid. Remainder used for cooking broth.',
-    body: 3,
-    sweetness: 3,
-    tannin: 2,
-    acidity: 1,
-    aromaTags: ['Plum'],
-    foodPairings: [],
-    purchase: {
-      store: 'Corner Store',
-      price: 6.50,
-      currency: '£',
-      date: '2026-07-15',
-    },
-    onlineLinks: {
-      wineSearcher: 'https://www.wine-searcher.com/find/yellow+tail+shiraz+2022',
-      vivino: 'https://www.vivino.com/search/wines?q=Yellow+Tail+Shiraz+2022',
-      googleShopping: 'https://www.google.com/search?tbm=shop&q=Yellow+Tail+Shiraz+2022+buy+online',
-      supermarketSearch: 'https://www.google.com/search?q=Yellow+Tail+Shiraz+2022+supermarket+price',
-    },
-    favorite: false,
-    wishlist: false,
-    createdAt: '2026-07-15T21:00:00.000Z',
-    updatedAt: '2026-07-15T21:00:00.000Z',
-  },
-  {
-    id: 'wine-5',
-    name: 'Châteauneuf-du-Pape Rouge',
-    producer: 'Château de Beaucastel',
-    vintage: '2019',
-    type: 'red',
-    grape: 'Mourvèdre, Grenache, Syrah blend',
-    region: 'Southern Rhône',
-    country: 'France',
-    abv: '14.5%',
-    imageUrl: 'https://images.unsplash.com/photo-1584916201218-f4242ceb4809?w=800&auto=format&fit=crop&q=80',
-    coupleVerdict: 'special-occasion',
-    averageRating: 5.0,
-    tastedTogether: true,
-    partner1Review: {
-      tasterName: 'Cody',
-      rating: 5.0,
-      verdict: 'special-occasion',
-      notes: 'Exceptional depth. Aromas of cedar, ripe dark berries, licorice and warm leather.',
-      aromas: ['Dark Cherry', 'Leather', 'Oak', 'Cedar', 'Pepper', 'Blackberry'],
-      date: '2026-06-20',
-    },
-    partner2Review: {
-      tasterName: 'Jess',
-      rating: 5.0,
-      verdict: 'special-occasion',
-      notes: 'Outstanding complexity and silky finish.',
-      aromas: ['Dark Cherry', 'Chocolate', 'Floral'],
-      date: '2026-06-20',
-    },
-    jointNotes: 'Splurge bottle for our anniversary dinner.',
-    body: 5,
-    sweetness: 1,
-    tannin: 4,
-    acidity: 3,
-    aromaTags: ['Dark Cherry', 'Leather', 'Oak', 'Cedar', 'Pepper', 'Blackberry', 'Chocolate'],
-    foodPairings: ['Roast Lamb', 'Duck Breast', 'Charcuterie & Cheese'],
-    purchase: {
-      store: 'Fine Wine Merchant',
-      price: 78.00,
-      currency: '£',
-      date: '2026-06-19',
-      notes: 'Special anniversary bottle',
-    },
-    onlineLinks: {
-      wineSearcher: 'https://www.wine-searcher.com/find/beaucastel+chateauneuf+du+pape+2019',
-      vivino: 'https://www.vivino.com/search/wines?q=Chateau+de+Beaucastel+Chateauneuf-du-Pape+2019',
-      googleShopping: 'https://www.google.com/search?tbm=shop&q=Chateau+de+Beaucastel+Chateauneuf+du+Pape+2019+buy+online',
-      supermarketSearch: 'https://www.google.com/search?q=Chateau+de+Beaucastel+Chateauneuf+du+Pape+2019+price',
-    },
-    favorite: true,
-    wishlist: false,
-    createdAt: '2026-06-20T22:00:00.000Z',
-    updatedAt: '2026-06-20T22:00:00.000Z',
-  }
-];
+// All writes go through this queue so concurrent requests (e.g. both phones
+// saving at once) can't interleave a read-modify-write and lose an update.
+let writeQueue: Promise<unknown> = Promise.resolve();
+function withWriteLock<T>(fn: () => Promise<T>): Promise<T> {
+  const run = writeQueue.then(fn, fn);
+  writeQueue = run.catch(() => undefined);
+  return run;
+}
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -298,20 +31,57 @@ function ensureDataDir() {
   }
 }
 
-export async function getWines(): Promise<Wine[]> {
+// Write to a temp file then rename, so a crash or full disk mid-write can
+// never leave a truncated wines.json behind.
+async function writeJsonAtomic(file: string, data: unknown) {
+  ensureDataDir();
+  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+  await fs.promises.writeFile(tmp, JSON.stringify(data, null, 2), 'utf-8');
+  await fs.promises.rename(tmp, file);
+}
+
+async function readWinesFile(): Promise<Wine[]> {
   ensureDataDir();
   if (!fs.existsSync(WINES_FILE)) {
-    await fs.promises.writeFile(WINES_FILE, JSON.stringify(SEED_WINES, null, 2), 'utf-8');
-    return SEED_WINES;
+    return [];
   }
-  try {
-    const raw = await fs.promises.readFile(WINES_FILE, 'utf-8');
-    const wines: Wine[] = JSON.parse(raw);
-    return wines;
-  } catch (err) {
-    console.error('Error reading wines file:', err);
-    return SEED_WINES;
+  // Let parse errors propagate: returning [] here would make the next save
+  // overwrite a damaged-but-recoverable file with an empty cellar.
+  const raw = await fs.promises.readFile(WINES_FILE, 'utf-8');
+  return JSON.parse(raw) as Wine[];
+}
+
+// Older versions stored photos as base64 data URLs inside wines.json.
+// Move any of those out to the uploads volume and keep just the URL.
+async function migrateInlineImages(wines: Wine[]): Promise<boolean> {
+  let changed = false;
+  for (const wine of wines) {
+    if (wine.imageUrl?.startsWith('data:image/')) {
+      try {
+        wine.imageUrl = await saveDataUrlImage(wine.imageUrl);
+        changed = true;
+      } catch (err) {
+        console.error(`Could not migrate inline photo for wine ${wine.id}:`, err);
+      }
+    }
   }
+  return changed;
+}
+
+let migrationDone = false;
+
+export async function getWines(): Promise<Wine[]> {
+  if (!migrationDone) {
+    await withWriteLock(async () => {
+      if (migrationDone) return;
+      const wines = await readWinesFile();
+      if (await migrateInlineImages(wines)) {
+        await writeJsonAtomic(WINES_FILE, wines);
+      }
+      migrationDone = true;
+    });
+  }
+  return readWinesFile();
 }
 
 export async function getWineById(id: string): Promise<Wine | null> {
@@ -320,9 +90,10 @@ export async function getWineById(id: string): Promise<Wine | null> {
 }
 
 export async function saveWine(wine: Wine): Promise<Wine> {
-  const wines = await getWines();
-  const existingIndex = wines.findIndex((w) => w.id === wine.id);
-  
+  if (wine.imageUrl?.startsWith('data:image/')) {
+    wine.imageUrl = await saveDataUrlImage(wine.imageUrl);
+  }
+
   if (!wine.onlineLinks?.wineSearcher) {
     wine.onlineLinks = {
       ...generateWineBuyLinks({
@@ -335,50 +106,95 @@ export async function saveWine(wine: Wine): Promise<Wine> {
     };
   }
 
-  if (existingIndex >= 0) {
-    wines[existingIndex] = { ...wine, updatedAt: new Date().toISOString() };
-  } else {
-    wines.unshift({ ...wine, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
-  }
+  const now = new Date().toISOString();
+  let replacedImage: string | undefined;
+  let saved: Wine;
 
-  await fs.promises.writeFile(WINES_FILE, JSON.stringify(wines, null, 2), 'utf-8');
-  return wine;
+  await withWriteLock(async () => {
+    const wines = await readWinesFile();
+    const existingIndex = wines.findIndex((w) => w.id === wine.id);
+    if (existingIndex >= 0) {
+      const previous = wines[existingIndex];
+      if (previous.imageUrl && previous.imageUrl !== wine.imageUrl) {
+        replacedImage = previous.imageUrl;
+      }
+      saved = { ...wine, createdAt: previous.createdAt || wine.createdAt || now, updatedAt: now };
+      wines[existingIndex] = saved;
+    } else {
+      saved = { ...wine, createdAt: wine.createdAt || now, updatedAt: now };
+      wines.unshift(saved);
+    }
+    await writeJsonAtomic(WINES_FILE, wines);
+  });
+
+  if (replacedImage) await deleteUploadedImage(replacedImage);
+  return saved!;
 }
 
 export async function replaceAllWines(wines: Wine[]): Promise<Wine[]> {
-  ensureDataDir();
-  await fs.promises.writeFile(WINES_FILE, JSON.stringify(wines, null, 2), 'utf-8');
+  for (const wine of wines) {
+    if (wine.imageUrl?.startsWith('data:image/')) {
+      wine.imageUrl = await saveDataUrlImage(wine.imageUrl);
+    }
+  }
+  await withWriteLock(() => writeJsonAtomic(WINES_FILE, wines));
   return wines;
 }
 
 export async function deleteWine(id: string): Promise<boolean> {
-  const wines = await getWines();
-  const filtered = wines.filter((w) => w.id !== id);
-  if (filtered.length === wines.length) return false;
-  await fs.promises.writeFile(WINES_FILE, JSON.stringify(filtered, null, 2), 'utf-8');
+  let removed: Wine | undefined;
+  await withWriteLock(async () => {
+    const wines = await readWinesFile();
+    removed = wines.find((w) => w.id === id);
+    if (!removed) return;
+    await writeJsonAtomic(WINES_FILE, wines.filter((w) => w.id !== id));
+  });
+  if (!removed) return false;
+  if (removed.imageUrl) await deleteUploadedImage(removed.imageUrl);
   return true;
 }
 
+// Server-side only: includes the stored Gemini key. Never send this to the browser.
 export async function getSettings(): Promise<UserSettings> {
   ensureDataDir();
   if (!fs.existsSync(SETTINGS_FILE)) {
-    await fs.promises.writeFile(SETTINGS_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2), 'utf-8');
-    return DEFAULT_SETTINGS;
+    return { ...DEFAULT_SETTINGS };
   }
   try {
     const raw = await fs.promises.readFile(SETTINGS_FILE, 'utf-8');
     return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
   } catch (err) {
-    return DEFAULT_SETTINGS;
+    console.error('Error reading settings file, using defaults:', err);
+    return { ...DEFAULT_SETTINGS };
   }
 }
 
+// What the browser is allowed to see: the key itself is replaced by flags.
+export function toPublicSettings(settings: UserSettings): UserSettings {
+  const { geminiApiKey, ...rest } = settings;
+  return {
+    ...rest,
+    hasGeminiKey: Boolean(geminiApiKey || process.env.GEMINI_API_KEY),
+    geminiKeyFromEnv: !geminiApiKey && Boolean(process.env.GEMINI_API_KEY),
+  };
+}
+
+// geminiApiKey semantics: undefined keeps the stored key, '' removes it,
+// any other string replaces it.
 export async function updateSettings(updates: Partial<UserSettings>): Promise<UserSettings> {
-  const current = await getSettings();
-  const updated = { ...current, ...updates };
-  ensureDataDir();
-  await fs.promises.writeFile(SETTINGS_FILE, JSON.stringify(updated, null, 2), 'utf-8');
-  return updated;
+  return withWriteLock(async () => {
+    const current = await getSettings();
+    const { hasGeminiKey: _h, geminiKeyFromEnv: _e, geminiApiKey, ...rest } = updates;
+    const updated: UserSettings = { ...current, ...rest };
+    if (geminiApiKey !== undefined) {
+      if (geminiApiKey.trim()) updated.geminiApiKey = geminiApiKey.trim();
+      else delete updated.geminiApiKey;
+    }
+    delete updated.hasGeminiKey;
+    delete updated.geminiKeyFromEnv;
+    await writeJsonAtomic(SETTINGS_FILE, updated);
+    return updated;
+  });
 }
 
 export async function getStats() {
@@ -452,8 +268,8 @@ export async function getStats() {
     }
   }
 
-  const topGrape = Object.entries(grapeCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Malbec';
-  const topRegion = Object.entries(regionCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Mendoza';
+  const topGrape = Object.entries(grapeCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
+  const topRegion = Object.entries(regionCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
 
   const avgDiff = dualRatedCount > 0 ? agreementDiffSum / dualRatedCount : 0;
   const coupleAgreementScore = Math.max(60, Math.round(100 - avgDiff * 18));

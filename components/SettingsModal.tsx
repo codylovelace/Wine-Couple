@@ -27,14 +27,17 @@ export function SettingsModal({
   const [partner1Name, setPartner1Name] = useState(settings.partner1Name);
   const [partner2Name, setPartner2Name] = useState(settings.partner2Name);
   const [defaultCurrency, setDefaultCurrency] = useState(settings.defaultCurrency || '£');
-  const [geminiApiKey, setGeminiApiKey] = useState(settings.geminiApiKey || '');
+  // The saved key never comes back from the server; this field only holds a new one.
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [removeGeminiKey, setRemoveGeminiKey] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
     setPartner1Name(settings.partner1Name);
     setPartner2Name(settings.partner2Name);
     setDefaultCurrency(settings.defaultCurrency || '£');
-    setGeminiApiKey(settings.geminiApiKey || '');
+    setGeminiApiKey('');
+    setRemoveGeminiKey(false);
   }, [settings, isOpen]);
 
   if (!isOpen) return null;
@@ -46,7 +49,8 @@ export function SettingsModal({
       partner1Avatar: partner1Name.trim() ? partner1Name.trim().charAt(0) : 'C',
       partner2Avatar: partner2Name.trim() ? partner2Name.trim().charAt(0) : 'J',
       defaultCurrency,
-      geminiApiKey: geminiApiKey.trim(),
+      // undefined keeps the saved key, '' removes it, anything else replaces it.
+      geminiApiKey: removeGeminiKey ? '' : geminiApiKey.trim() || undefined,
     });
     setSavedSuccess(true);
     setTimeout(() => {
@@ -92,7 +96,7 @@ export function SettingsModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
       <div 
-        className="w-full max-w-md max-h-[90vh] bg-[#0f0a0d] border border-champagne-500/25 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
+        className="w-full max-w-md max-h-[90dvh] bg-[#0f0a0d] border border-champagne-500/25 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -188,15 +192,33 @@ export function SettingsModal({
               </span>
             </div>
             <p className="text-xs text-stone-300 font-sans leading-relaxed">
-              The app includes an intelligent sommelier label parser out-of-the-box. Add your Gemini API key for live multimodal cloud scanning.
+              Lets the app read wine labels from your photos. Without a key you fill in the details by hand.
+              {settings.geminiKeyFromEnv && ' A key is set on the server (GEMINI_API_KEY); one saved here takes priority.'}
             </p>
             <input
               type="password"
               value={geminiApiKey}
-              onChange={(e) => setGeminiApiKey(e.target.value)}
-              placeholder="AIzaSy..."
+              onChange={(e) => {
+                setGeminiApiKey(e.target.value);
+                setRemoveGeminiKey(false);
+              }}
+              placeholder={settings.hasGeminiKey && !settings.geminiKeyFromEnv ? 'Key saved. Type a new one to replace it' : 'AIzaSy...'}
+              autoComplete="off"
               className="w-full px-3 py-2.5 rounded-xl bg-black/70 border border-white/15 text-xs text-white focus:outline-none focus:border-champagne-gold font-mono"
             />
+            {settings.hasGeminiKey && !settings.geminiKeyFromEnv && (
+              <label className="flex items-center gap-2 text-xs text-stone-300 font-sans">
+                <input
+                  type="checkbox"
+                  checked={removeGeminiKey}
+                  onChange={(e) => {
+                    setRemoveGeminiKey(e.target.checked);
+                    if (e.target.checked) setGeminiApiKey('');
+                  }}
+                />
+                <span>Remove the saved key</span>
+              </label>
+            )}
           </div>
 
           {/* Backup & Export */}
@@ -229,7 +251,7 @@ export function SettingsModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-champagne-500/15 bg-[#0f0a0d] flex items-center justify-between gap-3">
+        <div className="p-4 modal-footer-safe border-t border-champagne-500/15 bg-[#0f0a0d] flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={onClose}

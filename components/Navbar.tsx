@@ -30,16 +30,16 @@ export function Navbar({
     <header className="sticky top-0 z-30 pt-safe bg-[#0d080b]/92 backdrop-blur-2xl border-b border-champagne-500/15 px-4 py-3.5">
       <div className="flex items-center justify-between">
         {/* Brand & Couple Names */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-wine-900/90 via-wine-950 to-black flex items-center justify-center shadow-lg border border-champagne-500/30 shadow-wine-950/60">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 flex-shrink-0 rounded-2xl bg-gradient-to-br from-wine-900/90 via-wine-950 to-black flex items-center justify-center shadow-lg border border-champagne-500/30 shadow-wine-950/60">
             <WineIcon className="w-4 h-4 text-champagne-accent" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="font-serif font-bold text-xl tracking-[0.18em] gold-text-shimmer uppercase">
                 Vino
               </span>
-              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-wine-950/90 text-champagne-200 border border-champagne-500/25 font-sans font-medium tracking-wide">
+              <span className="hidden min-[400px]:inline whitespace-nowrap text-[11px] px-2.5 py-0.5 rounded-full bg-wine-950/90 text-champagne-200 border border-champagne-500/25 font-sans font-medium tracking-wide">
                 Private Cellar
               </span>
             </div>
@@ -55,7 +55,7 @@ export function Navbar({
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={onToggleSearch}
             className={`p-2.5 rounded-xl border transition-all ${
@@ -69,10 +69,10 @@ export function Navbar({
           </button>
           <button
             onClick={onOpenStats}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-stone-900/80 border border-white/15 text-xs font-medium text-stone-200 hover:text-white hover:border-champagne-500/35 transition-all shadow-inner"
+            className="flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-xl bg-stone-900/80 border border-white/15 text-xs font-medium text-stone-200 hover:text-white hover:border-champagne-500/35 transition-all shadow-inner"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-champagne-gold shadow-[0_0_8px_#d4af37]" />
-            <span className="font-sans text-xs font-semibold tracking-wide text-champagne-100">{totalBottles} bottles</span>
+            <span className="font-sans text-xs font-semibold tracking-wide text-champagne-100">{totalBottles} {totalBottles === 1 ? 'bottle' : 'bottles'}</span>
           </button>
         </div>
       </div>

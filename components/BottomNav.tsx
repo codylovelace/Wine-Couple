@@ -19,25 +19,25 @@ export function BottomNav({
   wishlistCount,
 }: BottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto glass-nav px-3 pt-2.5 pb-safe border-t border-champagne-500/20">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto glass-nav px-2 min-[375px]:px-3 pt-2.5 pb-safe border-t border-champagne-500/20">
       <div className="flex items-center justify-between relative">
         {/* Tab 1: Journal */}
         <button
           onClick={() => onSelectTab('journal')}
-          className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all font-sans ${
+          className={`flex flex-col items-center gap-1 py-1 px-1.5 min-[375px]:px-3 rounded-xl transition-all font-sans ${
             activeTab === 'journal'
               ? 'text-champagne-gold font-semibold'
               : 'text-stone-300 hover:text-white font-medium'
           }`}
         >
           <Wine className={`w-5 h-5 ${activeTab === 'journal' ? 'scale-105 text-champagne-gold' : ''}`} />
-          <span className="text-[11px] tracking-wide">Journal</span>
+          <span className="text-[11px] tracking-wide whitespace-nowrap">Journal</span>
         </button>
 
         {/* Tab 2: For You / Recommended */}
         <button
           onClick={() => onSelectTab('recommendations')}
-          className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all relative font-sans ${
+          className={`flex flex-col items-center gap-1 py-1 px-1.5 min-[375px]:px-3 rounded-xl transition-all relative font-sans ${
             activeTab === 'recommendations'
               ? 'text-champagne-gold font-semibold'
               : 'text-stone-300 hover:text-white font-medium'
@@ -47,7 +47,7 @@ export function BottomNav({
             <Sparkles className={`w-5 h-5 ${activeTab === 'recommendations' ? 'scale-105 text-champagne-gold' : ''}`} />
             <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-champagne-gold shadow-[0_0_8px_#d4af37]" />
           </div>
-          <span className="text-[11px] tracking-wide">For You</span>
+          <span className="text-[11px] tracking-wide whitespace-nowrap">For You</span>
         </button>
 
         {/* Center Floating Action Button: Add & Scan Wine */}
@@ -67,7 +67,7 @@ export function BottomNav({
         {/* Tab 3: Wishlist */}
         <button
           onClick={() => onSelectTab('wishlist')}
-          className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all relative font-sans ${
+          className={`flex flex-col items-center gap-1 py-1 px-1.5 min-[375px]:px-3 rounded-xl transition-all relative font-sans ${
             activeTab === 'wishlist'
               ? 'text-champagne-gold font-semibold'
               : 'text-stone-300 hover:text-white font-medium'
@@ -81,20 +81,20 @@ export function BottomNav({
               </span>
             )}
           </div>
-          <span className="text-[11px] tracking-wide">Wishlist</span>
+          <span className="text-[11px] tracking-wide whitespace-nowrap">Wishlist</span>
         </button>
 
         {/* Tab 4: Stats / Insights */}
         <button
           onClick={() => onSelectTab('stats')}
-          className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all font-sans ${
+          className={`flex flex-col items-center gap-1 py-1 px-1.5 min-[375px]:px-3 rounded-xl transition-all font-sans ${
             activeTab === 'stats'
               ? 'text-champagne-gold font-semibold'
               : 'text-stone-300 hover:text-white font-medium'
           }`}
         >
           <BarChart3 className={`w-5 h-5 ${activeTab === 'stats' ? 'scale-105 text-champagne-gold' : ''}`} />
-          <span className="text-[11px] tracking-wide">Insights</span>
+          <span className="text-[11px] tracking-wide whitespace-nowrap">Insights</span>
         </button>
       </div>
     </nav>

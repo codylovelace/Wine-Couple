@@ -1,12 +1,11 @@
 # syntax=docker/dockerfile:1
 
-# Stage 1: Install dependencies
+# Stage 1: Install dependencies exactly as locked
 FROM node:22-alpine AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 
 # Stage 2: Build the Next.js application
 FROM node:22-alpine AS builder
@@ -25,21 +24,27 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+# Wine list + settings, and bottle photos. Mount a volume on each.
+ENV DATA_DIR=/app/data
+ENV UPLOADS_DIR=/app/uploads
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy public assets and standalone server
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Ensure persistent data and uploads directories exist and are writable by nextjs user
-RUN mkdir -p /app/data /app/public/uploads && \
-    chown -R nextjs:nodejs /app/data /app/public/uploads
+# Created here and owned by nextjs so that fresh named volumes inherit
+# this ownership when Docker first mounts them.
+RUN mkdir -p /app/data /app/uploads && \
+    chown -R nextjs:nodejs /app/data /app/uploads
 
 USER nextjs
 
 EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1
 
 CMD ["node", "server.js"]

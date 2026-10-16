@@ -5,10 +5,11 @@ node_modules/
 .next/
 out/
 
-# runtime data (lives in Docker volumes, never in git)
-data/
-uploads/
-public/uploads/
+# runtime data (lives in Docker volumes, never in git).
+# Anchored to the repo root so app/uploads/ (the photo route) is still tracked.
+/data/
+/uploads/
+/public/uploads/
 
 # env files
 .env
