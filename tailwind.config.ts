@@ -10,6 +10,17 @@ const config: Config = {
   darkMode: 'class',
   theme: {
     extend: {
+      keyframes: {
+        fadeIn: { from: { opacity: '0' }, to: { opacity: '1' } },
+        slideUp: { from: { transform: 'translateY(24px)', opacity: '0' }, to: { transform: 'translateY(0)', opacity: '1' } },
+        // A bar sliding across, for waits with no known end.
+        indeterminate: { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(250%)' } },
+      },
+      animation: {
+        fadeIn: 'fadeIn 0.2s ease-out',
+        slideUp: 'slideUp 0.25s ease-out',
+        indeterminate: 'indeterminate 1.4s ease-in-out infinite',
+      },
       colors: {
         wine: {
           50: '#fcf2f4',

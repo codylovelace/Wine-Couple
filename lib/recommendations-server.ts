@@ -111,7 +111,7 @@ export async function getCachedRecommendations(): Promise<RecommendationSet | nu
 
 export type GenerateResult =
   | { ok: true; set: RecommendationSet }
-  | { ok: false; reason: 'no-key' | 'ai-error' | 'not-enough'; error: string };
+  | { ok: false; reason: 'no-key' | 'ai-error' | 'busy' | 'not-enough'; error: string };
 
 let inFlight: Promise<GenerateResult> | null = null;
 
@@ -171,7 +171,7 @@ function cellarLine(wines: Wine[]): string {
 
 type AskResult =
   | { ok: true; recommendations: WineRecommendation[]; model: string }
-  | { ok: false; reason: 'no-key' | 'ai-error'; error: string };
+  | { ok: false; reason: 'no-key' | 'ai-error' | 'busy'; error: string };
 
 // One Gemini request for a list of wines, shared by For You and More like
 // this: schema, retries (in callGemini), parsing and dropping cellar wines.

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { RecommendationSet, WineRecommendation } from '@/lib/recommendations';
-import { api } from '@/lib/api-client';
+import { api, isAbort, retryWhileBusy } from '@/lib/api-client';
+import { StillTrying } from '@/components/StillTrying';
 import { timeAgo } from '@/lib/format';
 import { Sparkles, Bookmark, RefreshCw, ExternalLink } from 'lucide-react';
 
@@ -41,19 +42,33 @@ export function MoreLikeThis({ wineId, wishlistNames, onAddToWishlist }: MoreLik
     };
   }, [wineId]);
 
+  const [attempt, setAttempt] = useState(1);
+  const abortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Keeps asking while Gemini is busy, until it answers or you cancel.
   const generate = async () => {
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     setGenerating(true);
+    setAttempt(1);
     setError(null);
     try {
-      const { set: fresh } = await api<{ set: RecommendationSet }>(`/api/wines/${encodeURIComponent(wineId)}/similar`, {
-        method: 'POST',
-      });
+      const { set: fresh } = await retryWhileBusy(
+        (signal) => api<{ set: RecommendationSet }>(`/api/wines/${encodeURIComponent(wineId)}/similar`, { method: 'POST', signal }),
+        { signal: ctrl.signal, onRetry: setAttempt }
+      );
       setSet(fresh);
       setStatus((s) => (s ? { ...s, stale: false } : s));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Suggestions failed. Try again.');
+      if (abortRef.current !== ctrl) return;
+      if (!isAbort(err) && !ctrl.signal.aborted) setError(err instanceof Error ? err.message : 'Suggestions failed. Try again.');
     } finally {
-      setGenerating(false);
+      if (abortRef.current === ctrl) {
+        abortRef.current = null;
+        setGenerating(false);
+      }
     }
   };
 
@@ -84,12 +99,14 @@ export function MoreLikeThis({ wineId, wishlistNames, onAddToWishlist }: MoreLik
         </p>
       )}
 
+      {generating && <StillTrying label="Finding similar wines" attempt={attempt} onCancel={() => abortRef.current?.abort()} />}
+
       {!status && !error ? (
         <p className="text-xs text-stone-400">Loading…</p>
       ) : !set ? (
         status && !status.hasKey ? (
           <p className="text-xs text-stone-400">Add a Gemini key in Settings to get suggestions for wines like this one.</p>
-        ) : (
+        ) : generating ? null : (
           <button
             onClick={generate}
             disabled={generating}
