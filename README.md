@@ -7,7 +7,7 @@ Built with Next.js, stored as JSON files plus photos on Docker volumes, and desi
 ## Features
 
 - **Your own login each**: Cody and Jess sign in separately. The cellar, wishlist and comments are shared; each of you can only set your own rating.
-- **Swipe to rate**: right if you'd buy it again, left if you wouldn't, with optional stars and notes. When one of you logs a bottle, the other gets it in their *Your turn to rate* list. Two rights make *Must Buy Again*, two lefts *Avoid*, a split *Table Wine*; you can also mark a bottle *Great Value* by hand.
+- **Swipe to rate**: right if you'd buy it again, left if you wouldn't, with optional stars and notes. When one of you logs a bottle, the other gets it in their *Your turn to rate* list. Two rights make *Must Buy Again*, two lefts *Avoid*, one each a *Split Decision*; you can also mark a bottle *Great Value* or *Table Wine* by hand.
 - **Comments** on every wine, so you can talk about a bottle from your own phones.
 - **Bottle photos**: taken with the phone camera or picked from the photo roll, shrunk to a sensible size in the browser before upload.
 - **Optional label scanning**: with a Google Gemini API key, the app reads the label and fills in the name, producer, grape, region and vintage. Without a key you type the details yourself; it never guesses.

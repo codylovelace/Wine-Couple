@@ -22,6 +22,7 @@ export function FilterBar({
     { id: 'good-value', label: 'Great Value' },
     { id: 'loved-it', label: 'Must Buy Again' },
     { id: 'okay', label: 'Table Wine' },
+    { id: 'split', label: 'Split Decision' },
     { id: 'bad', label: 'Avoid' },
   ];
 

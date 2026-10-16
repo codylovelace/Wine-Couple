@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Wine, VERDICTS, PublicUser, isTasted, partnersDisagree } from '@/lib/types';
+import { Wine, VERDICTS, PublicUser, isTasted } from '@/lib/types';
 import { awaitingRating, reviewFor } from '@/lib/wine-logic';
 import { wineTitle } from '@/lib/format';
 import { canonicalShop } from '@/lib/shops';
@@ -61,7 +61,6 @@ export function WineCard({ wine, me, partner, onClick, onShopClick }: WineCardPr
                   className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-sans font-semibold tracking-wide uppercase border ${verdictConfig.bgClass} ${verdictConfig.colorClass} ${verdictConfig.borderClass}`}
                 >
                   <span>{verdictConfig.shortLabel}</span>
-                  {partnersDisagree(wine) && <span className="ml-1.5 text-amber-300 normal-case">· split</span>}
                 </span>
               ) : (
                 <span className="inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-sans font-semibold tracking-wide uppercase border bg-stone-900/80 text-stone-300 border-white/15">

@@ -233,8 +233,8 @@ export function WineDetailModal({
                   </div>
                 );
               })}
-              {partnersDisagree(wine) && (
-                <p className="text-xs text-amber-200">You disagree on this one, so it&apos;s marked as a split.</p>
+              {partnersDisagree(wine) && wine.coupleVerdict !== 'split' && (
+                <p className="text-xs text-violet-200">You disagree on this one.</p>
               )}
             </section>
           )}
