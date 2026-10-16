@@ -24,8 +24,8 @@ export function CoupleStatsModal({
   if (!isOpen) return null;
 
   const totalBottles = wines.length;
-  let totalRatingSum = 0;
   let totalSpend = 0;
+  let pricedCount = 0;
   let goodValueCount = 0;
   let lovedItCount = 0;
   let agreementDiffSum = 0;
@@ -37,8 +37,10 @@ export function CoupleStatsModal({
   let bestValueWine: Wine | null = null;
 
   for (const w of wines) {
-    totalRatingSum += w.averageRating || 0;
-    if (w.purchase?.price) totalSpend += Number(w.purchase.price);
+    if (w.purchase?.price) {
+      totalSpend += Number(w.purchase.price);
+      pricedCount++;
+    }
     if (w.coupleVerdict === 'good-value') goodValueCount++;
     if (w.coupleVerdict === 'loved-it') lovedItCount++;
 
@@ -49,9 +51,16 @@ export function CoupleStatsModal({
     if (w.partner1Review?.rating && w.partner2Review?.rating) {
       dualRatedCount++;
       agreementDiffSum += Math.abs(w.partner1Review.rating - w.partner2Review.rating);
+    } else if (
+      typeof w.partner1Review?.liked === 'boolean' &&
+      typeof w.partner2Review?.liked === 'boolean'
+    ) {
+      // No stars from both: use the swipes. A split counts as the widest gap.
+      dualRatedCount++;
+      agreementDiffSum += w.partner1Review.liked === w.partner2Review.liked ? 0 : 4;
     }
 
-    if (!highestRatedWine || w.averageRating > highestRatedWine.averageRating) {
+    if (w.averageRating > 0 && (!highestRatedWine || w.averageRating > highestRatedWine.averageRating)) {
       highestRatedWine = w;
     }
 
@@ -62,7 +71,8 @@ export function CoupleStatsModal({
     }
   }
 
-  const avgPrice = totalBottles > 0 ? (totalSpend / totalBottles).toFixed(2) : '0.00';
+  // Average over bottles with a recorded price, so unpriced ones don't drag it down.
+  const avgPrice = pricedCount > 0 ? (totalSpend / pricedCount).toFixed(2) : '0.00';
   const avgDiff = dualRatedCount > 0 ? agreementDiffSum / dualRatedCount : 0;
   const agreementScore = Math.max(65, Math.round(100 - avgDiff * 18));
 

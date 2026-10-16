@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Wine, VERDICTS, UserSettings } from '@/lib/types';
-import { Star, MapPin, ShoppingBag, Wine as WineIcon } from 'lucide-react';
+import { Wine, VERDICTS, UserSettings, isTasted, partnersDisagree } from '@/lib/types';
+import { Star, MapPin, ShoppingBag, Wine as WineIcon, Heart, X } from 'lucide-react';
 
 interface WineCardProps {
   wine: Wine;
@@ -18,6 +18,7 @@ export function WineCard({
   onClick,
 }: WineCardProps) {
   const verdictConfig = VERDICTS[wine.coupleVerdict] || VERDICTS['good'];
+  const tasted = isTasted(wine);
 
   return (
     <div
@@ -50,17 +51,26 @@ export function WineCard({
           <div>
             {/* Top row: Verdict Badge & Star Rating */}
             <div className="flex items-center justify-between gap-1 mb-1.5">
-              <span
-                className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-sans font-semibold tracking-wide uppercase border ${verdictConfig.bgClass} ${verdictConfig.colorClass} ${verdictConfig.borderClass}`}
-              >
-                <span>{verdictConfig.shortLabel}</span>
-              </span>
+              {tasted ? (
+                <span
+                  className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-sans font-semibold tracking-wide uppercase border ${verdictConfig.bgClass} ${verdictConfig.colorClass} ${verdictConfig.borderClass}`}
+                >
+                  <span>{verdictConfig.shortLabel}</span>
+                  {partnersDisagree(wine) && <span className="ml-1.5 text-amber-300 normal-case">· split</span>}
+                </span>
+              ) : (
+                <span className="inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-sans font-semibold tracking-wide uppercase border bg-stone-900/80 text-stone-300 border-white/15">
+                  <span>Not tasted yet</span>
+                </span>
+              )}
 
               {/* Star Rating Badge */}
-              <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-black/70 border border-champagne-500/25 text-champagne-accent text-xs font-sans font-bold">
-                <Star className="w-3.5 h-3.5 fill-champagne-gold text-champagne-gold" />
-                <span>{wine.averageRating.toFixed(1)}</span>
-              </div>
+              {wine.averageRating > 0 && (
+                <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-black/70 border border-champagne-500/25 text-champagne-accent text-xs font-sans font-bold">
+                  <Star className="w-3.5 h-3.5 fill-champagne-gold text-champagne-gold" />
+                  <span>{wine.averageRating.toFixed(1)}</span>
+                </div>
+              )}
             </div>
 
             {/* Wine Name & Producer */}
@@ -81,7 +91,7 @@ export function WineCard({
           </div>
 
           {/* Bottom row: Purchase Info & Partner Scores */}
-          <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between gap-2 font-sans">
+          <div className="mt-3 pt-2.5 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 font-sans">
             {/* Where Bought & Price */}
             <div className="flex items-center gap-2 text-xs">
               {wine.purchase?.store ? (
@@ -97,19 +107,24 @@ export function WineCard({
               ) : null}
             </div>
 
-            {/* Partner Scores with Initials */}
+            {/* Each partner's swipe (and stars, if given) */}
             <div className="flex items-center gap-1.5 text-xs text-stone-300 font-sans">
-              {wine.partner1Review && (
-                <span className="px-2 py-0.5 rounded-md bg-black/70 border border-white/15 flex items-center gap-1" title={`${settings.partner1Name}: ${wine.partner1Review.rating}★`}>
-                  <span className="text-champagne-400 font-bold">{settings.partner1Name.charAt(0)}</span>
-                  <span className="text-stone-100 font-semibold">{wine.partner1Review.rating}★</span>
-                </span>
-              )}
-              {wine.partner2Review && (
-                <span className="px-2 py-0.5 rounded-md bg-black/70 border border-white/15 flex items-center gap-1" title={`${settings.partner2Name}: ${wine.partner2Review.rating}★`}>
-                  <span className="text-champagne-400 font-bold">{settings.partner2Name.charAt(0)}</span>
-                  <span className="text-stone-100 font-semibold">{wine.partner2Review.rating}★</span>
-                </span>
+              {([
+                [settings.partner1Name, wine.partner1Review],
+                [settings.partner2Name, wine.partner2Review],
+              ] as const).map(([who, review]) =>
+                review && (typeof review.liked === 'boolean' || review.rating > 0) ? (
+                  <span
+                    key={who}
+                    className="px-2 py-0.5 rounded-md bg-black/70 border border-white/15 flex items-center gap-1"
+                    title={`${who}: ${review.liked === true ? 'liked it' : review.liked === false ? "didn't like it" : ''}${review.rating > 0 ? ` ${review.rating}★` : ''}`}
+                  >
+                    <span className="text-champagne-400 font-bold">{who.charAt(0)}</span>
+                    {review.liked === true && <Heart className="w-3 h-3 text-emerald-300 fill-emerald-400/40" />}
+                    {review.liked === false && <X className="w-3 h-3 text-rose-300" />}
+                    {review.rating > 0 && <span className="text-stone-100 font-semibold">{review.rating}★</span>}
+                  </span>
+                ) : null
               )}
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWines, saveWine, replaceAllWines } from '@/lib/db';
-import { Wine } from '@/lib/types';
+import { Wine, isTasted } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (verdict && verdict !== 'all') {
-      wines = wines.filter((w) => w.coupleVerdict === verdict);
+      wines = wines.filter((w) => isTasted(w) && w.coupleVerdict === verdict);
     }
 
     if (type && type !== 'all') {
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       abv: body.abv || '',
       imageUrl: body.imageUrl || '',
       coupleVerdict: body.coupleVerdict || 'good',
-      averageRating: Number(body.averageRating) || 4.0,
+      averageRating: Number(body.averageRating) || 0,
       tastedTogether: body.tastedTogether ?? true,
       partner1Review: body.partner1Review,
       partner2Review: body.partner2Review,
@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
         notes: body.purchase?.notes || '',
       },
       onlineLinks: body.onlineLinks || {},
+      tasted: body.tasted,
       wishlist: body.wishlist || false,
       favorite: body.favorite || false,
       createdAt: body.createdAt || new Date().toISOString(),

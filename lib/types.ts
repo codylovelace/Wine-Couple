@@ -77,7 +77,10 @@ export const VERDICTS: Record<Verdict, VerdictConfig> = {
 
 export interface PartnerReview {
   tasterName: string;
-  rating: number; // 1 to 5
+  // This partner's swipe: right = liked it / would buy again, left = didn't.
+  // Undefined on reviews saved before swiping existed.
+  liked?: boolean;
+  rating: number; // 1 to 5, or 0 when not rated (stars are optional)
   verdict?: Verdict;
   notes: string;
   aromas?: string[];
@@ -136,6 +139,11 @@ export interface Wine {
   purchase: PurchaseDetails;
   onlineLinks: OnlineBuyLinks;
   
+  // false for a wishlist pick you haven't tried yet; it has no verdict or
+  // rating and is kept out of the journal, stats and recommendations.
+  // Missing means tasted (every wine saved before this field existed).
+  tasted?: boolean;
+
   // Organization
   wishlist?: boolean;
   favorite?: boolean;
@@ -174,4 +182,33 @@ export interface WineScanResult {
   tannin?: number;
   acidity?: number;
   foodPairings?: string[];
+}
+
+export function isTasted(wine: Pick<Wine, 'tasted'>): boolean {
+  return wine.tasted !== false;
+}
+
+// Mean of the partner ratings actually given (1-5); 0 means nobody rated it.
+export function averageOfRatings(...ratings: (number | undefined)[]): number {
+  const given = ratings.filter((r): r is number => typeof r === 'number' && r > 0);
+  if (given.length === 0) return 0;
+  return Number((given.reduce((a, b) => a + b, 0) / given.length).toFixed(1));
+}
+
+// Couple verdict implied by the two swipes. A split lands on Table Wine
+// ("average") rather than picking a side; it can be changed on the details
+// screen. Undefined when nobody swiped.
+export function verdictFromSwipes(p1?: boolean, p2?: boolean): Verdict | undefined {
+  const swipes = [p1, p2].filter((v): v is boolean => typeof v === 'boolean');
+  if (swipes.length === 0) return undefined;
+  if (swipes.every(Boolean)) return 'loved-it';
+  if (swipes.every((v) => !v)) return 'bad';
+  return 'okay';
+}
+
+// True when both partners swiped and disagreed.
+export function partnersDisagree(wine: Pick<Wine, 'partner1Review' | 'partner2Review'>): boolean {
+  const a = wine.partner1Review?.liked;
+  const b = wine.partner2Review?.liked;
+  return typeof a === 'boolean' && typeof b === 'boolean' && a !== b;
 }
