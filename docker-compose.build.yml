@@ -15,6 +15,7 @@ services:
       - TZ=${TZ:-Europe/London}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-flash-latest}
+      - GEMINI_FALLBACK_MODEL=${GEMINI_FALLBACK_MODEL:-}
     volumes:
       - wine-data:/app/data
       - wine-photos:/app/uploads
