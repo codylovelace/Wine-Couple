@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { Wine, VERDICTS, PublicUser, PartnerReview, isTasted, partnersDisagree } from '@/lib/types';
 import { reviewFor, reviewStatus } from '@/lib/wine-logic';
 import { formatDate, timeAgo, wineTitle } from '@/lib/format';
+import { WineRecommendation } from '@/lib/recommendations';
+import { MoreLikeThis } from '@/components/MoreLikeThis';
 import {
   X,
   Star,
@@ -30,6 +32,9 @@ interface WineDetailModalProps {
   onRate: (wine: Wine) => void;
   onAddComment: (wine: Wine, text: string) => Promise<void>;
   onDeleteComment: (wine: Wine, commentId: string) => Promise<void>;
+  // Lower-cased names already on the wishlist, for the "More like this" buttons.
+  wishlistNames: string[];
+  onAddToWishlist: (rec: WineRecommendation) => void;
 }
 
 const sectionTitle = 'text-xs font-semibold tracking-wider text-champagne-300 uppercase';
@@ -53,6 +58,8 @@ export function WineDetailModal({
   onRate,
   onAddComment,
   onDeleteComment,
+  wishlistNames,
+  onAddToWishlist,
 }: WineDetailModalProps) {
   const [comment, setComment] = useState('');
   const [sending, setSending] = useState(false);
@@ -410,6 +417,8 @@ export function WineDetailModal({
               </div>
             </section>
           )}
+
+          <MoreLikeThis key={wine.id} wineId={wine.id} wishlistNames={wishlistNames} onAddToWishlist={onAddToWishlist} />
 
           <p className="text-[11px] text-stone-500 text-center">
             {wine.createdBy ? `Added by ${nameOf(wine.createdBy)}` : 'Added'} {timeAgo(wine.createdAt)}

@@ -13,6 +13,7 @@ Built with Next.js, stored as JSON files plus photos on Docker volumes, and desi
 - **Optional label scanning**: with a Google Gemini API key, the app reads the label and fills in the name, producer, grape, region and vintage. Without a key you type the details yourself; it never guesses.
 - **Where you bought it and for how much**, plus search links (Wine-Searcher, Vivino, Google Shopping) to find it again.
 - **For You suggestions**: with a Gemini key, suggestions based on the wines you both liked (and away from ones you both disliked). They're cached and refreshed when your shared likes change, or on demand.
+- **More like this**: on any wine, tap to have Gemini suggest a few wines with a similar taste. The last set is saved per wine, so reopening it costs nothing.
 - **Shopping list**: everything marked *Must Buy Again* or *Great Value*, grouped by the shop you bought it in, plus a wishlist of wines to try.
 - **Couple stats.**
 - **Backup and restore** of every wine, rating and comment as JSON from Settings (photos are not included; back up the photos volume for those).
@@ -37,7 +38,7 @@ The image is private because the repository is private, so Portainer needs a log
    | --- | --- | --- |
    | `WINE_PORT` | `3000` | Port on the Docker host |
    | `TZ` | `Europe/London` | Container time zone |
-   | `GEMINI_API_KEY` | *(empty)* | Turns on label scanning and For You suggestions. Can instead be entered in the app's Settings |
+   | `GEMINI_API_KEY` | *(empty)* | Turns on label scanning, For You and More like this. Can instead be entered in the app's Settings |
    | `GEMINI_MODEL` | `gemini-flash-latest` | Gemini model used for both |
    | `GEMINI_FALLBACK_MODEL` | *(empty)* | Optional backup model, tried when the main one is overloaded or rate limited after a few retries. May cost more than the main model |
 
@@ -52,7 +53,7 @@ After new commits land on `main` and the GitHub Action has finished, open the st
 
 | Volume | Mounted at | Contains |
 | --- | --- | --- |
-| `wine-couple_wine-data` | `/app/data` | `wines.json`, `settings.json` (including a Gemini key saved in Settings), `users.json` (names and password hashes), `sessions.json`, `recommendations.json` (cached suggestions) |
+| `wine-couple_wine-data` | `/app/data` | `wines.json`, `settings.json` (including a Gemini key saved in Settings), `users.json` (names and password hashes), `sessions.json`, `recommendations.json` and `similar.json` (cached suggestions) |
 | `wine-couple_wine-photos` | `/app/uploads` | Bottle photos |
 
 Back up both volumes. If you'd rather use host folders (for example on the Synology), replace the named volumes with bind mounts and make the folders writable by UID 1001, which the app runs as: `chown -R 1001:1001 /path/to/folder`. The container's health check fails if either folder isn't writable, so a permissions problem shows up as *unhealthy* in Portainer.
