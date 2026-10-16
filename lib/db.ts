@@ -11,7 +11,7 @@ const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const META_FILE = path.join(DATA_DIR, 'meta.json');
 
 // Bump when adding a one-off data migration below.
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 const DEFAULT_SETTINGS: UserSettings = {
   partner1Name: 'Cody',
@@ -84,6 +84,29 @@ async function migrateLegacyData(wines: Wine[], fromVersion: number): Promise<bo
         delete wine.tannin;
         delete wine.acidity;
       }
+      changed = true;
+    }
+
+    if (fromVersion < 3) {
+      // Enjoyable and Special Occasion were dropped (2026-10-16). Where both
+      // swipes exist they decide; otherwise those were hand-picked as wines
+      // you liked, which is Must Buy Again now. Untasted picks never show a
+      // verdict, so they just get the neutral one.
+      const old = wine.coupleVerdict as string;
+      if (old === 'good' || old === 'special-occasion') {
+        const fromSwipes = verdictFromSwipes(wine.partner1Review?.liked, wine.partner2Review?.liked);
+        if (!isTasted(wine)) {
+          wine.coupleVerdict = 'okay';
+        } else if (fromSwipes) {
+          wine.coupleVerdict = fromSwipes;
+          wine.verdictPinned = false;
+        } else {
+          wine.coupleVerdict = 'loved-it';
+          wine.verdictPinned = true;
+        }
+      }
+      // The favourite heart was removed; "would buy again" covers it.
+      delete (wine as Wine & { favorite?: boolean }).favorite;
       changed = true;
     }
   }

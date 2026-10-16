@@ -15,6 +15,7 @@ import { CoupleStatsModal } from '@/components/CoupleStatsModal';
 import { SettingsModal } from '@/components/SettingsModal';
 import { RecommendedSection } from '@/components/RecommendedSection';
 import { RateSheet } from '@/components/RateSheet';
+import { ShoppingList } from '@/components/ShoppingList';
 import { Wine as WineIcon, Sparkles, Plus, ArrowUpDown, ChevronRight, Heart } from 'lucide-react';
 
 interface CellarAppProps {
@@ -208,7 +209,7 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
     const q = searchQuery.trim().toLowerCase();
     return wines
       .filter((w) => {
-        if (activeTab === 'wishlist' ? !w.wishlist : !isTasted(w)) return false;
+        if (!isTasted(w)) return false;
         if (
           q &&
           ![w.name, w.producer, w.grape, w.region, w.country, w.purchase?.store, w.jointNotes]
@@ -227,9 +228,19 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         if (sortBy === 'price-high') return (b.purchase?.price || 0) - (a.purchase?.price || 0);
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
-  }, [wines, activeTab, searchQuery, activeVerdict, activeType, sortBy]);
+  }, [wines, searchQuery, activeVerdict, activeType, sortBy]);
 
-  const wishlistCount = useMemo(() => wines.filter((w) => w.wishlist).length, [wines]);
+  // The shopping tab honours the search box too.
+  const searchedWines = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return wines;
+    return wines.filter((w) =>
+      [w.name, w.producer, w.grape, w.region, w.country, w.purchase?.store]
+        .filter(Boolean)
+        .some((field) => field!.toLowerCase().includes(q))
+    );
+  }, [wines, searchQuery]);
+
   const wishlistWineNames = useMemo(() => wines.filter((w) => w.wishlist).map((w) => w.name.toLowerCase()), [wines]);
   const filtersActive = Boolean(searchQuery || activeVerdict !== 'all' || activeType !== 'all');
 
@@ -262,7 +273,12 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
           </div>
         )}
 
-        {activeTab === 'recommendations' ? (
+        {activeTab === 'shopping' ? (
+          <>
+            <h2 className="font-serif text-2xl text-stone-100 font-semibold px-1">Shopping</h2>
+            <ShoppingList wines={searchedWines} me={me} partner={partner} onOpen={(w) => setSelectedId(w.id)} />
+          </>
+        ) : activeTab === 'recommendations' ? (
           <RecommendedSection
             settings={namedSettings}
             onAddToWishlist={handleAddRecommendationToWishlist}
@@ -272,10 +288,6 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
           />
         ) : (
           <>
-            {activeTab === 'wishlist' && (
-              <h2 className="font-serif text-2xl text-stone-100 font-semibold px-1">Wishlist</h2>
-            )}
-
             {/* Wines your partner logged that you haven't rated */}
             {activeTab === 'journal' && myTurn.length > 0 && (
               <button
@@ -364,14 +376,12 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
                 </div>
                 <div>
                   <h3 className="font-serif text-xl font-semibold text-stone-100">
-                    {filtersActive ? 'No wines match' : activeTab === 'wishlist' ? 'Your wishlist is empty' : 'No wines yet'}
+                    {filtersActive ? 'No wines match' : 'No wines yet'}
                   </h3>
                   <p className="text-xs text-stone-300 mt-1 max-w-xs mx-auto leading-relaxed">
                     {filtersActive
                       ? 'Try clearing the search or filters.'
-                      : activeTab === 'wishlist'
-                        ? 'Tap the bookmark on any wine, or add ideas from For You.'
-                        : 'Log your first bottle to start your shared cellar.'}
+                      : 'Log your first bottle to start your shared cellar.'}
                   </p>
                 </div>
                 {filtersActive ? (
@@ -402,7 +412,7 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         )}
       </main>
 
-      <BottomNav activeTab={activeTab} onSelectTab={handleSelectTab} onOpenAddModal={() => openAdd()} wishlistCount={wishlistCount} />
+      <BottomNav activeTab={activeTab} onSelectTab={handleSelectTab} onOpenAddModal={() => openAdd()} />
 
       <WineDetailModal
         wine={selectedWine}
@@ -415,7 +425,6 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         }}
         onDelete={handleDeleteWine}
         onToggleWishlist={(w) => quickUpdate(w, { wishlist: !w.wishlist })}
-        onToggleFavorite={(w) => quickUpdate(w, { favorite: !w.favorite })}
         onRate={(w) => setRateQueue([w])}
         onAddComment={handleAddComment}
         onDeleteComment={handleDeleteComment}

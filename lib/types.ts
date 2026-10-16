@@ -1,12 +1,8 @@
 export type WineType = 'red' | 'white' | 'rose' | 'sparkling' | 'dessert' | 'orange';
 
-export type Verdict = 
-  | 'good-value' 
-  | 'loved-it' 
-  | 'good' 
-  | 'okay' 
-  | 'bad' 
-  | 'special-occasion';
+// Three verdicts follow the swipes (both right, split, both left); Great
+// Value is picked by hand.
+export type Verdict = 'loved-it' | 'good-value' | 'okay' | 'bad';
 
 export interface VerdictConfig {
   id: Verdict;
@@ -37,15 +33,6 @@ export const VERDICTS: Record<Verdict, VerdictConfig> = {
     borderClass: 'border-emerald-500/30',
     description: 'Punches well above its price point',
   },
-  'good': {
-    id: 'good',
-    label: 'Enjoyable',
-    shortLabel: 'Enjoyable',
-    colorClass: 'text-stone-200',
-    bgClass: 'bg-stone-900/60',
-    borderClass: 'border-stone-700/40',
-    description: 'Very pleasant bottle, would drink again',
-  },
   'okay': {
     id: 'okay',
     label: 'Table Wine',
@@ -63,15 +50,6 @@ export const VERDICTS: Record<Verdict, VerdictConfig> = {
     bgClass: 'bg-rose-950/40',
     borderClass: 'border-rose-500/30',
     description: 'Not to our taste, would not purchase again',
-  },
-  'special-occasion': {
-    id: 'special-occasion',
-    label: 'Special Occasion',
-    shortLabel: 'Special Occasion',
-    colorClass: 'text-champagne-accent',
-    bgClass: 'bg-champagne-950/50',
-    borderClass: 'border-champagne-500/40',
-    description: 'Celebratory or premium bottle',
   },
 };
 
@@ -173,7 +151,6 @@ export interface Wine {
 
   // Organization
   wishlist?: boolean;
-  favorite?: boolean;
   createdBy?: string; // user id
   updatedBy?: string; // user id
   createdAt: string;

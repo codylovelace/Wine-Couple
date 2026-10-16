@@ -134,7 +134,6 @@ export type SharedWineFields = Pick<
   | 'purchase'
   | 'onlineLinks'
   | 'wishlist'
-  | 'favorite'
   | 'tasted'
   | 'verdictPinned'
 >;
@@ -222,7 +221,7 @@ export function cleanSharedFields(raw: unknown): Partial<SharedWineFields> {
     out.onlineLinks = links;
   }
 
-  for (const key of ['wishlist', 'favorite', 'tasted', 'verdictPinned'] as const) {
+  for (const key of ['wishlist', 'tasted', 'verdictPinned'] as const) {
     if (typeof r[key] === 'boolean') out[key] = r[key] as boolean;
   }
   return out;

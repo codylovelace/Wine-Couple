@@ -14,7 +14,7 @@ interface WineCardProps {
 }
 
 export function WineCard({ wine, me, partner, onClick }: WineCardProps) {
-  const verdictConfig = VERDICTS[wine.coupleVerdict] || VERDICTS['good'];
+  const verdictConfig = VERDICTS[wine.coupleVerdict] || VERDICTS['okay'];
   const tasted = isTasted(wine);
   const myTurn = awaitingRating(wine, me.slot);
   const partnerPending = partner ? awaitingRating(wine, partner.slot) : false;
