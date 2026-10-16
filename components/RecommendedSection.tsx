@@ -3,7 +3,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { RecommendationSet, WineRecommendation } from '@/lib/recommendations';
 import { UserSettings } from '@/lib/types';
-import { api } from '@/lib/api-client';
+import { api, isAbort, retryWhileBusy } from '@/lib/api-client';
+import { StillTrying } from '@/components/StillTrying';
 import { timeAgo } from '@/lib/format';
 import { Sparkles, ExternalLink, Bookmark, Plus, MapPin, RefreshCw } from 'lucide-react';
 
@@ -36,19 +37,36 @@ export function RecommendedSection({
   const [error, setError] = useState<string | null>(null);
   const autoRequested = useRef(false);
 
+  const [attempt, setAttempt] = useState(1);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Keeps asking while Gemini is busy, until it answers or you cancel.
   const generate = useCallback(async () => {
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     setGenerating(true);
+    setAttempt(1);
     setError(null);
     try {
-      const { set: fresh } = await api<{ set: RecommendationSet }>('/api/recommendations', { method: 'POST' });
+      const { set: fresh } = await retryWhileBusy(
+        (signal) => api<{ set: RecommendationSet }>('/api/recommendations', { method: 'POST', signal }),
+        { signal: ctrl.signal, onRetry: setAttempt }
+      );
       setSet(fresh);
       setStatus((s) => (s ? { ...s, stale: false } : s));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Suggestions failed. Try again.');
+      if (abortRef.current !== ctrl) return;
+      if (!isAbort(err) && !ctrl.signal.aborted) setError(err instanceof Error ? err.message : 'Suggestions failed. Try again.');
     } finally {
-      setGenerating(false);
+      if (abortRef.current === ctrl) {
+        abortRef.current = null;
+        setGenerating(false);
+      }
     }
   }, []);
+
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   useEffect(() => {
     (async () => {
@@ -98,6 +116,12 @@ export function RecommendedSection({
         )}
       </div>
 
+      {generating && (
+        <div className="p-3.5 rounded-2xl luxury-card">
+          <StillTrying label="Finding wines you might both like" attempt={attempt} onCancel={() => abortRef.current?.abort()} />
+        </div>
+      )}
+
       {error && (
         <div className="p-3.5 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-sm text-rose-100 space-y-2">
           <p>{error}</p>
@@ -122,12 +146,8 @@ export function RecommendedSection({
           title="Nothing to go on yet"
           text="Once you've both liked a wine or two, suggestions based on them will appear here."
         />
-      ) : generating && !set ? (
-        <div className="py-16 text-center space-y-3">
-          <RefreshCw className="w-8 h-8 text-champagne-gold animate-spin mx-auto" />
-          <p className="text-xs text-stone-300">Finding wines you&apos;ll both like…</p>
-        </div>
-      ) : set ? (
+      ) : generating && !set ? null
+      : set ? (
         <div className="space-y-4">
           {set.recommendations.map((rec) => {
             const isWishlisted = wishlistWineNames.includes(rec.name.toLowerCase());

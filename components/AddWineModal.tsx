@@ -13,7 +13,8 @@ import {
   verdictFromSwipes,
 } from '@/lib/types';
 import { otherSlot, reviewFor, reviewStatus, SharedWineFields } from '@/lib/wine-logic';
-import { WineSubmission } from '@/lib/api-client';
+import { WineSubmission, api, isAbort, retryWhileBusy } from '@/lib/api-client';
+import { StillTrying } from '@/components/StillTrying';
 import { SwipeVerdict, SwipeChoice } from '@/components/SwipeVerdict';
 import { X, Camera, Upload, Sparkles, Star, Store, Check, RefreshCw, ChevronRight, Heart } from 'lucide-react';
 import { POPULAR_AROMAS, COMMON_STORES } from '@/lib/wine-search-links';
@@ -45,6 +46,18 @@ export function AddWineModal({ isOpen, onClose, me, partner, settings, editingWi
   const [isScanning, setIsScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
   const [scanMessage, setScanMessage] = useState<string | null>(null);
+  // Which try the label scan is on; above 1 means Gemini has been busy.
+  const [scanAttempt, setScanAttempt] = useState(1);
+  // Set from the moment a photo is picked, so Cancel works while it's being
+  // prepared as well as while Gemini is busy.
+  const scanAbort = useRef<AbortController | null>(null);
+
+  // Stop retrying a scan when the form closes, or when you skip ahead to
+  // type the details yourself.
+  useEffect(() => {
+    if (!isOpen || step !== 'photo') scanAbort.current?.abort();
+  }, [isOpen, step]);
+  useEffect(() => () => scanAbort.current?.abort(), []);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -150,9 +163,7 @@ export function AddWineModal({ isOpen, onClose, me, partner, settings, editingWi
   };
 
   const handleImageFile = async (file: File) => {
-    setIsScanning(true);
-    setScanned(false);
-    setScanMessage(null);
+    const ctrl = startScan();
 
     let dataUrl: string;
     try {
@@ -161,36 +172,58 @@ export function AddWineModal({ isOpen, onClose, me, partner, settings, editingWi
       dataUrl = (await prepareBottlePhoto(file)).dataUrl;
     } catch (err) {
       console.error('Could not read photo:', err);
-      setScanMessage("Couldn't read that photo. Try another one, or enter the details by hand.");
-      setIsScanning(false);
+      finishScan(ctrl, "Couldn't read that photo. Try another one, or enter the details by hand.");
       return;
     }
+    if (ctrl.signal.aborted) return finishScan(ctrl, 'Scan cancelled.');
     setImageUrl(dataUrl);
 
     if (!settings.hasGeminiKey) {
-      setIsScanning(false);
+      finishScan(ctrl, null);
       setStep('verdict');
       return;
     }
+    await scanLabel(dataUrl, ctrl);
+  };
+
+  const startScan = () => {
+    scanAbort.current?.abort();
+    const ctrl = new AbortController();
+    scanAbort.current = ctrl;
+    setIsScanning(true);
+    setScanned(false);
+    setScanMessage(null);
+    setScanAttempt(1);
+    return ctrl;
+  };
+
+  const finishScan = (ctrl: AbortController, message: string | null) => {
+    // A newer scan has taken over; leave its state alone.
+    if (scanAbort.current !== ctrl) return;
+    scanAbort.current = null;
+    setScanMessage(message);
+    setIsScanning(false);
+  };
+
+  // Reads the label, retrying for as long as Gemini is busy. Only moves on
+  // to the swipe once the label is read; on a real failure or Cancel it stays
+  // on the photo, so you can try again, take another or type the details.
+  const scanLabel = async (dataUrl: string, ctrl = startScan()) => {
     try {
-      const res = await fetch('/api/scan-wine', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: dataUrl }),
-      });
-      const data = await res.json();
-      if (data.success && data.scanResult) {
-        applyScanResult(data.scanResult);
-        setScanned(true);
-      } else {
-        setScanMessage(data.error || 'Label scan was not available. Enter the details by hand.');
-      }
-    } catch (err) {
-      console.error('Scan error:', err);
-      setScanMessage('Label scan failed. Enter the details by hand.');
-    } finally {
-      setIsScanning(false);
+      const { scanResult } = await retryWhileBusy(
+        (signal) => api<{ scanResult: WineScanResult }>('/api/scan-wine', { method: 'POST', body: { imageBase64: dataUrl }, signal }),
+        { signal: ctrl.signal, onRetry: (attempt) => scanAbort.current === ctrl && setScanAttempt(attempt) }
+      );
+      if (scanAbort.current !== ctrl) return;
+      applyScanResult(scanResult);
+      setScanned(true);
+      finishScan(ctrl, null);
       setStep('verdict');
+    } catch (err) {
+      finishScan(
+        ctrl,
+        isAbort(err) || ctrl.signal.aborted ? 'Scan cancelled.' : err instanceof Error ? err.message : 'Label scan failed.'
+      );
     }
   };
 
@@ -333,15 +366,44 @@ export function AddWineModal({ isOpen, onClose, me, partner, settings, editingWi
                 </p>
               </div>
 
-              {scanMessage && !isScanning && (
+              {scanMessage && !isScanning && !imageUrl.startsWith('data:') && (
                 <div className="p-3 rounded-2xl bg-stone-900/90 border border-white/15 text-xs text-stone-200">{scanMessage}</div>
               )}
 
               {isScanning ? (
-                <div className="relative h-64 rounded-3xl bg-black border-2 border-champagne-gold/60 overflow-hidden flex flex-col items-center justify-center p-6 text-center">
-                  {imageUrl && <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-25" />}
-                  <RefreshCw className="w-8 h-8 text-champagne-gold animate-spin mb-3 z-10" />
-                  <span className="font-serif text-base font-semibold text-white z-10">Reading the label…</span>
+                <div className="space-y-3">
+                  <div className="relative h-64 rounded-3xl bg-black border-2 border-champagne-gold/60 overflow-hidden flex flex-col items-center justify-center p-6 text-center">
+                    {imageUrl && <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-25" />}
+                    <RefreshCw className="w-8 h-8 text-champagne-gold animate-spin mb-3 z-10" />
+                    <span className="font-serif text-base font-semibold text-white z-10">Reading the label…</span>
+                  </div>
+                  <StillTrying label="Reading the label" attempt={scanAttempt} onCancel={() => scanAbort.current?.abort()} />
+                </div>
+              ) : scanMessage && imageUrl.startsWith('data:') ? (
+                // The scan didn't work: keep the photo and offer the ways on.
+                <div className="space-y-3">
+                  <div className="relative h-40 rounded-3xl bg-black border border-white/15 overflow-hidden">
+                    <img src={imageUrl} alt="Your photo" className="absolute inset-0 w-full h-full object-cover opacity-60" />
+                  </div>
+                  <p className="p-3 rounded-2xl bg-stone-900/90 border border-white/15 text-xs text-stone-200" role="alert">
+                    {scanMessage}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => scanLabel(imageUrl)}
+                      className="py-3 rounded-xl bg-gradient-to-r from-wine-900 via-wine-800 to-black text-champagne-100 border border-champagne-500/35 text-sm font-bold flex items-center justify-center gap-1.5"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Try again
+                    </button>
+                    <button
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="py-3 rounded-xl bg-stone-900 border border-white/15 text-sm font-semibold text-stone-100 flex items-center justify-center gap-1.5"
+                    >
+                      <Camera className="w-4 h-4" />
+                      New photo
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">

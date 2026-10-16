@@ -11,7 +11,9 @@ export type GeminiPart = { text: string } | { inlineData: { mimeType: string; da
 
 export type GeminiResult =
   | { ok: true; text: string; model: string }
-  | { ok: false; reason: 'no-key' | 'ai-error'; error: string };
+  // busy: overloaded, rate limited for the minute, slow or unreachable. Worth
+  // asking again shortly; the app keeps retrying these until you cancel.
+  | { ok: false; reason: 'no-key' | 'ai-error' | 'busy'; error: string };
 
 export async function geminiApiKey(): Promise<string | undefined> {
   const settings = await getSettings();
@@ -67,7 +69,8 @@ export async function callGemini(
     if (last && !last.ok && !last.tryOtherModel) break;
   }
 
-  return { ok: false, reason: 'ai-error', error: last && !last.ok ? last.error : 'Gemini took too long to answer. Try again.' };
+  if (!last || last.ok) return { ok: false, reason: 'busy', error: 'Gemini took too long to answer. Try again.' };
+  return { ok: false, reason: last.busy ? 'busy' : 'ai-error', error: last.error };
 }
 
 const RETRY_DELAYS_MS = [1_000, 3_000];
@@ -75,7 +78,7 @@ const MIN_ATTEMPT_MS = 5_000;
 
 type Attempt =
   | { ok: true; text: string }
-  | { ok: false; error: string; retryable: boolean; tryOtherModel: boolean; retryAfterMs?: number };
+  | { ok: false; error: string; retryable: boolean; tryOtherModel: boolean; busy?: boolean; retryAfterMs?: number };
 
 async function attemptOnce(
   model: string,
@@ -130,6 +133,7 @@ async function attemptOnce(
             ? 'Your Gemini key has used up its free daily allowance. It resets at midnight Pacific time.'
             : 'Gemini rate limit reached. Try again in a minute.',
           retryable: !daily,
+          busy: !daily,
           tryOtherModel: true,
           retryAfterMs: retryAfterMs(res, detail),
         };
@@ -139,6 +143,7 @@ async function attemptOnce(
           ok: false,
           error: 'Gemini is overloaded right now (a problem on Google’s side). Try again in a few minutes.',
           retryable: true,
+          busy: true,
           tryOtherModel: true,
           retryAfterMs: retryAfterMs(res, detail),
         };
@@ -172,8 +177,8 @@ async function attemptOnce(
     const timedOut = error instanceof Error && error.name === 'TimeoutError';
     console.error(`Gemini (${model}) call for ${opts.feature} failed:`, error);
     return timedOut
-      ? { ok: false, error: 'Gemini took too long to answer. Try again.', retryable: false, tryOtherModel: false }
-      : { ok: false, error: "Couldn't reach Gemini. Try again.", retryable: true, tryOtherModel: false };
+      ? { ok: false, error: 'Gemini took too long to answer. Try again.', retryable: false, busy: true, tryOtherModel: false }
+      : { ok: false, error: "Couldn't reach Gemini. Try again.", retryable: true, busy: true, tryOtherModel: false };
   }
 }
 
