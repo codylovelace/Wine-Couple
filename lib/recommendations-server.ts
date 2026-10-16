@@ -77,7 +77,7 @@ const RESPONSE_SCHEMA = {
   required: ['recommendations'],
 };
 
-function sanitize(list: unknown[], currency: string, cellar: Set<string>): WineRecommendation[] {
+function sanitize(list: unknown[], currency: string, cellar: Set<string>, max: number): WineRecommendation[] {
   const out: WineRecommendation[] = [];
   for (const item of list) {
     if (!item || typeof item !== 'object') continue;
@@ -102,7 +102,7 @@ function sanitize(list: unknown[], currency: string, cellar: Set<string>): WineR
       onlineLinks: generateWineBuyLinks({ name, producer }),
     });
   }
-  return out.slice(0, HOW_MANY);
+  return out.slice(0, max);
 }
 
 export async function getCachedRecommendations(): Promise<RecommendationSet | null> {
@@ -150,8 +150,34 @@ Return ONLY JSON:
 {"recommendations":[{"name":"wine name without producer","producer":"producer","type":"red|white|rose|sparkling|dessert|orange","grape":"grape or blend","region":"region","country":"country","approxPrice":12.5,"why":"one or two sentences, addressed to them, on why it fits","similarTo":["name of one of their liked wines it's based on"]}]}
 Prices are in ${currency}.`;
 
+  const asked = await askForWines(prompt, wines, currency, 'Suggestions', HOW_MANY);
+  if (!asked.ok) return asked;
+
+  const set: RecommendationSet = {
+    fingerprint: fingerprint(wines),
+    generatedAt: new Date().toISOString(),
+    model: asked.model,
+    recommendations: asked.recommendations,
+  };
+  await withWriteLock(() => writeJsonAtomic(CACHE_FILE, set));
+  return { ok: true, set };
+}
+
+const JSON_SHAPE = `{"recommendations":[{"name":"wine name without producer","producer":"producer","type":"red|white|rose|sparkling|dessert|orange","grape":"grape or blend","region":"region","country":"country","approxPrice":12.5,"why":"one or two sentences, addressed to them, on why it fits","similarTo":["name of one of their wines it's based on"]}]}`;
+
+function cellarLine(wines: Wine[]): string {
+  return wines.map((w) => [w.producer, w.name].filter(Boolean).join(' ')).slice(0, 150).join('; ');
+}
+
+type AskResult =
+  | { ok: true; recommendations: WineRecommendation[]; model: string }
+  | { ok: false; reason: 'no-key' | 'ai-error'; error: string };
+
+// One Gemini request for a list of wines, shared by For You and More like
+// this: schema, retries (in callGemini), parsing and dropping cellar wines.
+async function askForWines(prompt: string, wines: Wine[], currency: string, feature: string, max: number): Promise<AskResult> {
   const result = await callGemini([{ text: prompt }], {
-    feature: 'Suggestions',
+    feature,
     temperature: 0.7,
     timeoutMs: 60_000,
     responseSchema: RESPONSE_SCHEMA,
@@ -163,16 +189,13 @@ Prices are in ${currency}.`;
     // Some models wrap JSON in a markdown fence even in JSON mode.
     list = findList(JSON.parse(result.text.replace(/^```(?:json)?\s*|\s*```$/g, '')));
   } catch {
-    console.warn(`Suggestions: Gemini (${GEMINI_MODEL}) answer was not JSON:`, result.text.slice(0, 2000));
+    console.warn(`${feature}: Gemini (${result.model}) answer was not JSON:`, result.text.slice(0, 2000));
     return { ok: false, reason: 'ai-error', error: "Gemini's answer couldn't be read. Try again." };
   }
   const cellar = new Set(wines.map((w) => `${w.producer}|${w.name}`.toLowerCase()));
-  const recommendations = sanitize(list, currency, cellar);
+  const recommendations = sanitize(list, currency, cellar, max);
   if (recommendations.length === 0) {
-    console.warn(
-      `Suggestions: nothing usable from Gemini (${GEMINI_MODEL}); ${list.length} item(s) returned:`,
-      result.text.slice(0, 2000)
-    );
+    console.warn(`${feature}: nothing usable from Gemini (${result.model}); ${list.length} item(s) returned:`, result.text.slice(0, 2000));
     return {
       ok: false,
       reason: 'ai-error',
@@ -182,13 +205,103 @@ Prices are in ${currency}.`;
           : 'Gemini didn’t suggest anything this time. Try again.',
     };
   }
+  return { ok: true, recommendations, model: result.model };
+}
+
+// ---- More like this: suggestions for one wine ----
+
+const SIMILAR_FILE = path.join(DATA_DIR, 'similar.json');
+const SIMILAR_COUNT = 4;
+
+type SimilarCache = Record<string, RecommendationSet>;
+
+// Changes when anything Gemini was told about the wine changes, so editing
+// the wine (or adding notes) offers a fresh set.
+export function similarFingerprint(wine: Wine): string {
+  const key = JSON.stringify({ wine: describeForSimilar(wine), model: GEMINI_MODEL });
+  return crypto.createHash('sha256').update(key).digest('hex').slice(0, 16);
+}
+
+function describeForSimilar(w: Wine): string {
+  const profile = (
+    [
+      ['body', w.body],
+      ['sweetness', w.sweetness],
+      ['tannin', w.tannin],
+      ['acidity', w.acidity],
+    ] as const
+  )
+    .filter(([, v]) => typeof v === 'number' && v > 0)
+    .map(([k, v]) => `${k} ${v}/5`)
+    .join(', ');
+  const notes = [w.partner1Review?.notes, w.partner2Review?.notes, w.jointNotes]
+    .map((n) => n?.trim())
+    .filter(Boolean)
+    .join(' / ')
+    .slice(0, 600);
+  return [
+    describe(w),
+    profile && `taste profile: ${profile}`,
+    w.foodPairings?.length ? `goes with: ${w.foodPairings.slice(0, 5).join(', ')}` : '',
+    notes && `their notes: ${notes}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+export async function getCachedSimilar(wineId: string): Promise<RecommendationSet | null> {
+  const cache = await readJson<SimilarCache>(SIMILAR_FILE, {});
+  return cache[wineId] ?? null;
+}
+
+const similarInFlight = new Map<string, Promise<GenerateResult>>();
+
+// Both phones asking about the same wine at once share one request.
+export function generateSimilar(wineId: string): Promise<GenerateResult> {
+  let pending = similarInFlight.get(wineId);
+  if (!pending) {
+    pending = makeSimilar(wineId).finally(() => similarInFlight.delete(wineId));
+    similarInFlight.set(wineId, pending);
+  }
+  return pending;
+}
+
+async function makeSimilar(wineId: string): Promise<GenerateResult> {
+  const wines = await getWines();
+  const wine = wines.find((w) => w.id === wineId);
+  if (!wine) return { ok: false, reason: 'ai-error', error: 'That wine no longer exists.' };
+  const currency = (await getSettings()).defaultCurrency || '£';
+
+  const prompt = `You are a friendly, knowledgeable wine merchant helping a couple in the UK.
+
+They want more wines that taste like this one:
+${describeForSimilar(wine)}
+
+Wines already in their cellar (do not suggest these): ${cellarLine(wines)}
+
+Suggest ${SIMILAR_COUNT} different real, currently available wines with a similar taste and style: similar body, fruit, sweetness and structure. They can be from other producers, regions or grapes as long as they would feel familiar to someone who enjoys this wine. Keep to a similar price where possible. Prefer wines sold by UK supermarkets or high-street merchants.
+
+Return ONLY JSON:
+${JSON_SHAPE}
+In "why", say what they share with this wine. "similarTo" can be left empty. Prices are in ${currency}.`;
+
+  const asked = await askForWines(prompt, wines, currency, 'More like this', SIMILAR_COUNT);
+  if (!asked.ok) return asked;
 
   const set: RecommendationSet = {
-    fingerprint: fingerprint(wines),
+    fingerprint: similarFingerprint(wine),
     generatedAt: new Date().toISOString(),
-    model: result.model,
-    recommendations,
+    model: asked.model,
+    recommendations: asked.recommendations,
   };
-  await withWriteLock(() => writeJsonAtomic(CACHE_FILE, set));
+  // Read outside the lock: getWines can take it itself.
+  const ids = new Set((await getWines()).map((w) => w.id));
+  await withWriteLock(async () => {
+    const cache = await readJson<SimilarCache>(SIMILAR_FILE, {});
+    // Drop entries for wines that have since been deleted.
+    for (const id of Object.keys(cache)) if (!ids.has(id)) delete cache[id];
+    cache[wineId] = set;
+    await writeJsonAtomic(SIMILAR_FILE, cache);
+  });
   return { ok: true, set };
 }

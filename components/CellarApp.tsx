@@ -428,6 +428,8 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         onRate={(w) => setRateQueue([w])}
         onAddComment={handleAddComment}
         onDeleteComment={handleDeleteComment}
+        wishlistNames={wishlistWineNames}
+        onAddToWishlist={handleAddRecommendationToWishlist}
       />
 
       <AddWineModal
