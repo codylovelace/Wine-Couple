@@ -1,5 +1,7 @@
+import fs from 'fs';
 import { callGemini, GeminiPart } from './gemini';
 import { Verdict, VERDICTS, WineScanResult, WineType } from './types';
+import { detectImageType, IMAGE_TYPES, uploadPathFromUrl } from './uploads';
 
 const WINE_TYPES: WineType[] = ['red', 'white', 'rose', 'sparkling', 'dessert', 'orange'];
 
@@ -61,12 +63,28 @@ export const SCAN_RESPONSE_SCHEMA = {
   required: ['name', 'producer', 'vintage', 'type', 'grape', 'region', 'country'],
 };
 
-function parseDataImage(imageBase64: string): { mimeType: string; data: string } {
-  const mimeMatch = imageBase64.match(/^data:(image\/[\w.+-]+);base64,/);
-  return {
-    mimeType: mimeMatch ? mimeMatch[1] : 'image/jpeg',
-    data: imageBase64.replace(/^data:image\/[\w.+-]+;base64,/, ''),
-  };
+async function resolveScanImage(input: string): Promise<{ mimeType: string; data: string } | null> {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith('data:image/')) {
+    const match = trimmed.match(/^data:(image\/[\w.+-]+);base64,(.+)$/s);
+    if (!match) return null;
+    const data = match[2].replace(/\s+/g, '');
+    return data ? { mimeType: match[1], data } : null;
+  }
+
+  const filePath = uploadPathFromUrl(trimmed);
+  if (!filePath) return null;
+
+  try {
+    const buf = await fs.promises.readFile(filePath);
+    const kind = detectImageType(buf);
+    if (!kind) return null;
+    return { mimeType: IMAGE_TYPES[kind].mime, data: buf.toString('base64') };
+  } catch {
+    return null;
+  }
 }
 
 export type ScanOutcome =
@@ -75,10 +93,24 @@ export type ScanOutcome =
 
 // Reads front (and optional back) label photo(s) using Gemini with a strict JSON schema.
 export async function scanBottleImages(imageBase64: string, backImageBase64?: string): Promise<ScanOutcome> {
-  const hasBack = typeof backImageBase64 === 'string' && backImageBase64.trim() !== '';
+  const front = await resolveScanImage(imageBase64);
+  const back =
+    typeof backImageBase64 === 'string' && backImageBase64.trim()
+      ? await resolveScanImage(backImageBase64)
+      : null;
+  const images = [front, back].filter((x): x is { mimeType: string; data: string } => x !== null);
+  if (images.length === 0) {
+    return {
+      ok: false,
+      reason: 'ai-error',
+      error: "Couldn't read the bottle photo for scanning. Try taking a fresh photo.",
+    };
+  }
+
+  const hasBoth = Boolean(front && back);
   const prompt = `You are an expert master sommelier and wine label recognition system.
-Analyze ${hasBack ? 'these front and back wine bottle label photos together' : 'this wine bottle / label photo'} and extract all key information into structured JSON.
-${hasBack ? 'Use the front label for the main bottle name/brand and vintage, and the back label for grape varietals, ABV, tasting notes, and food pairings if printed there.' : ''}
+Analyze ${hasBoth ? 'these front and back wine bottle label photos together' : 'this wine bottle / label photo'} and extract all key information into structured JSON.
+${hasBoth ? 'Use the front label for the main bottle name/brand and vintage, and the back label for grape varietals, ABV, tasting notes, and food pairings if printed there.' : ''}
 Field guidance:
 - "name": The wine's own name as the front label shows it most prominently (brand or cuvée such as 'Navigator', 'Yellow Tail', 'Gran Reserva 904', 'Private Bin'). Never just the grape variety if a brand/cuvée or producer is shown; if only producer and grape appear, put producer here.
 - "producer": The winery or producer if printed separately from the name; otherwise "".
@@ -93,12 +125,10 @@ Field guidance:
 - "body", "sweetness", "tannin", "acidity": integers from 1 to 5.
 - "foodPairings": 2-4 concise food pairing suggestions.`;
 
-  const front = parseDataImage(imageBase64);
-  const parts: GeminiPart[] = [{ text: prompt }, { inlineData: { mimeType: front.mimeType, data: front.data } }];
-  if (hasBack && backImageBase64) {
-    const back = parseDataImage(backImageBase64);
-    parts.push({ inlineData: { mimeType: back.mimeType, data: back.data } });
-  }
+  const parts: GeminiPart[] = [
+    { text: prompt },
+    ...images.map((img) => ({ inlineData: img })),
+  ];
 
   const result = await callGemini(parts, {
     feature: 'Label scanning',

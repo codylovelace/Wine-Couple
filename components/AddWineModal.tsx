@@ -233,7 +233,11 @@ export function AddWineModal({
     if (r.body || r.sweetness || r.tannin || r.acidity) {
       setScanProfile({ body: r.body, sweetness: r.sweetness, tannin: r.tannin, acidity: r.acidity });
     }
-    if (r.tastingNotesSummary) setJointNotes((prev) => prev || `Label: ${r.tastingNotesSummary}`);
+    if (r.tastingNotesSummary) {
+      setJointNotes((prev) =>
+        !prev || prev.startsWith('Label: ') ? `Label: ${r.tastingNotesSummary}` : prev
+      );
+    }
   };
 
   const handleFrontFile = async (file: File) => {
@@ -293,10 +297,11 @@ export function AddWineModal({
 
   const scanLabel = async (frontUrl: string, backUrl?: string, ctrl = startScan(), stayOnDetails = false) => {
     try {
-      const payload: { imageBase64: string; backImageBase64?: string } = { imageBase64: frontUrl };
-      if (backUrl && backUrl.startsWith('data:image/')) {
-        payload.backImageBase64 = backUrl;
-      }
+      const isScannable = (u?: string) => Boolean(u && (u.startsWith('data:image/') || u.startsWith('/uploads/')));
+      const primary = isScannable(frontUrl) ? frontUrl : isScannable(backUrl) ? backUrl! : frontUrl;
+      const secondary = isScannable(frontUrl) && isScannable(backUrl) ? backUrl : undefined;
+      const payload: { imageBase64: string; backImageBase64?: string } = { imageBase64: primary };
+      if (secondary) payload.backImageBase64 = secondary;
       const { scanResult } = await retryWhileBusy(
         (signal) => api<{ scanResult: WineScanResult }>('/api/scan-wine', { method: 'POST', body: payload, signal }),
         { signal: ctrl.signal, onRetry: (attempt) => scanAbort.current === ctrl && setScanAttempt(attempt) }
@@ -908,17 +913,35 @@ export function AddWineModal({
                   </label>
                 </div>
 
-                {/* Offer to scan both if back label was just uploaded in Step 3 */}
-                {backImageUrl.startsWith('data:image/') && imageUrl && settings.hasGeminiKey && (
-                  <button
-                    type="button"
-                    disabled={isScanning}
-                    onClick={() => scanLabel(imageUrl, backImageUrl, startScan(), true)}
-                    className="w-full py-2 rounded-xl btn-secondary text-xs font-semibold flex items-center justify-center gap-1.5"
-                  >
-                    <Sparkles className={`w-3.5 h-3.5 text-wine-700 ${isScanning ? 'animate-spin' : ''}`} />
-                    <span>{isScanning ? 'Reading labels…' : 'Rescan with back label'}</span>
-                  </button>
+                {/* Offer to scan both (or just back label) from Step 3 */}
+                {backImageUrl && settings.hasGeminiKey && (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      disabled={isScanning}
+                      onClick={() =>
+                        scanLabel(
+                          imageUrl || backImageUrl,
+                          imageUrl ? backImageUrl : undefined,
+                          startScan(),
+                          true
+                        )
+                      }
+                      className="w-full py-2 rounded-xl btn-secondary text-xs font-semibold flex items-center justify-center gap-1.5"
+                    >
+                      <Sparkles className={`w-3.5 h-3.5 text-wine-700 ${isScanning ? 'animate-spin' : ''}`} />
+                      <span>
+                        {isScanning ? 'Reading labels…' : imageUrl ? 'Rescan with back label' : 'Scan back label'}
+                      </span>
+                    </button>
+                    {isScanning && (
+                      <StillTrying
+                        label={imageUrl && backImageUrl ? 'Reading front & back labels' : 'Reading the label'}
+                        attempt={scanAttempt}
+                        onCancel={() => scanAbort.current?.abort()}
+                      />
+                    )}
+                  </div>
                 )}
 
                 {/* Tactile Wine Style Pills */}
