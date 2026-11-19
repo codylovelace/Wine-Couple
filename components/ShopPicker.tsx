@@ -37,24 +37,28 @@ export function ShopPicker({ value, onChange, customShops, selectClass, inputCla
         className={selectClass}
         aria-label="Shop"
       >
-        <option value="">Not recorded</option>
-        <optgroup label="Supermarkets and shops">
+        <option value="" className="bg-cellar-900">
+          Not recorded
+        </option>
+        <optgroup label="Supermarkets and shops" className="bg-cellar-900">
           {UK_SHOPS.map((shop) => (
-            <option key={shop} value={shop}>
+            <option key={shop} value={shop} className="bg-cellar-900">
               {shop}
             </option>
           ))}
         </optgroup>
         {customShops.length > 0 && (
-          <optgroup label="Your other shops">
+          <optgroup label="Your other shops" className="bg-cellar-900">
             {customShops.map((shop) => (
-              <option key={shop} value={shop}>
+              <option key={shop} value={shop} className="bg-cellar-900">
                 {shop}
               </option>
             ))}
           </optgroup>
         )}
-        <option value={CUSTOM}>Custom…</option>
+        <option value={CUSTOM} className="bg-cellar-900">
+          Custom…
+        </option>
       </select>
       {typing && (
         <input
@@ -81,4 +85,18 @@ export function customShopsFrom(stores: (string | undefined)[]): string[] {
     counts.set(shop, (counts.get(shop) ?? 0) + 1);
   }
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([shop]) => shop);
+}
+
+// Most frequently used shops across the cellar (listed or custom), capped at limit.
+export function popularShopsFrom(stores: (string | undefined)[], limit = 6): string[] {
+  const counts = new Map<string, number>();
+  for (const raw of stores) {
+    const shop = canonicalShop(raw);
+    if (!shop) continue;
+    counts.set(shop, (counts.get(shop) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([shop]) => shop);
 }

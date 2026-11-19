@@ -4,8 +4,8 @@
   "description": "Collaborative wine tasting journal and smart AI bottle scanner for couples",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0d080b",
-  "theme_color": "#771b30",
+  "background_color": "#0c0a09",
+  "theme_color": "#0c0a09",
   "orientation": "portrait-primary",
   "icons": [
     {

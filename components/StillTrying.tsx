@@ -14,15 +14,15 @@ interface StillTryingProps {
 export function StillTrying({ label, attempt, onCancel }: StillTryingProps) {
   return (
     <div className="space-y-2.5" role="status" aria-live="polite">
-      <div className="h-1.5 rounded-full bg-black/60 overflow-hidden">
-        <div className="h-full w-2/5 rounded-full bg-gradient-to-r from-wine-700 to-champagne-gold animate-indeterminate" />
+      <div className="h-1.5 rounded-full bg-cellar-950 border border-white/[0.06] overflow-hidden">
+        <div className="h-full w-2/5 rounded-full bg-gradient-to-r from-wine-600 to-champagne-gold animate-indeterminate" />
       </div>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-stone-200 leading-snug">
           {attempt > 1 ? (
             <>
               Gemini is busy, still trying
-              <span className="text-stone-400"> (attempt {attempt})</span>
+              <span className="text-stone-400 tabular-nums"> (attempt {attempt})</span>
             </>
           ) : (
             `${label}…`
@@ -31,7 +31,7 @@ export function StillTrying({ label, attempt, onCancel }: StillTryingProps) {
         <button
           type="button"
           onClick={onCancel}
-          className="px-3 py-1.5 rounded-lg bg-stone-900 border border-white/15 text-xs font-semibold text-stone-200 flex-shrink-0"
+          className="px-3 py-1.5 rounded-lg btn-secondary text-xs font-semibold flex-shrink-0"
         >
           Cancel
         </button>

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { PublicUser, UserSettings, Wine } from '@/lib/types';
 import { api } from '@/lib/api-client';
-import { X, User, Key, Download, Upload, LogOut, Lock } from 'lucide-react';
+import { X, User, Key, Download, Upload, LogOut, Lock, Sliders } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -17,12 +17,10 @@ interface SettingsModalProps {
   onImported: (wines: Wine[]) => void;
 }
 
-const inputClass =
-  'w-full px-3 py-2.5 rounded-xl bg-black/70 border border-white/15 text-sm text-white focus:outline-none focus:border-champagne-gold font-sans';
-const cardClass = 'p-4 rounded-3xl luxury-card space-y-3';
+const inputClass = 'w-full px-3 py-2.5 text-sm field-input';
+const cardClass = 'p-4 rounded-2xl surface-card space-y-3';
 const titleClass = 'text-xs font-semibold uppercase tracking-wider text-champagne-300 flex items-center gap-1.5';
-const buttonClass =
-  'px-4 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 border border-white/15 text-sm font-semibold text-stone-100 disabled:opacity-50';
+const buttonClass = 'px-4 py-2.5 rounded-xl btn-secondary text-sm font-semibold disabled:opacity-50';
 
 // A small form section with its own saving state and message.
 function useAction() {
@@ -124,23 +122,27 @@ export function SettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn"
+      onClick={onClose}
+    >
       <div
-        className="w-full max-w-md max-h-[92dvh] bg-[#0f0a0d] border border-champagne-500/25 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
+        className="w-full max-w-md max-h-[92dvh] bg-cellar-900 border border-white/10 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-4 border-b border-champagne-500/15 flex items-center justify-between">
-          <h2 className="font-serif font-semibold text-lg text-stone-100">Settings</h2>
+        <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
+          <h2 className="font-serif font-semibold text-xl text-champagne-50">Settings</h2>
           <button
+            type="button"
             onClick={onClose}
             aria-label="Close"
-            className="w-9 h-9 rounded-full bg-stone-900 text-stone-300 hover:text-white flex items-center justify-center border border-white/10"
+            className="w-9 h-9 rounded-full bg-cellar-800 hover:bg-cellar-700 text-stone-300 hover:text-white flex items-center justify-center border border-white/10"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans modal-footer-safe">
           {/* Your account */}
           <section className={cardClass}>
             <h3 className={titleClass}>
@@ -152,17 +154,29 @@ export function SettingsModal({
               onSubmit={(e) => {
                 e.preventDefault();
                 nameAction.run(async () => {
-                  const { user } = await api<{ user: PublicUser }>('/api/auth/account', { method: 'PATCH', body: { name } });
+                  const { user } = await api<{ user: PublicUser }>('/api/auth/account', {
+                    method: 'PATCH',
+                    body: { name },
+                  });
                   onRenamed(user);
                   return 'Name saved. Use it to sign in from now on.';
                 });
               }}
             >
               <label className="block space-y-1">
-                <span className="text-xs text-stone-300">Your name (also what you sign in with)</span>
+                <span className="text-xs text-stone-400">Your name (also what you sign in with)</span>
                 <div className="flex gap-2">
-                  <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} autoComplete="username" />
-                  <button type="submit" disabled={nameAction.busy || !name.trim() || name.trim() === me.name} className={buttonClass}>
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className={inputClass}
+                    autoComplete="username"
+                  />
+                  <button
+                    type="submit"
+                    disabled={nameAction.busy || !name.trim() || name.trim() === me.name}
+                    className={buttonClass}
+                  >
                     Save
                   </button>
                 </div>
@@ -171,11 +185,14 @@ export function SettingsModal({
             </form>
 
             <form
-              className="space-y-2 pt-2 border-t border-white/10"
+              className="space-y-2 pt-3 border-t border-white/[0.07]"
               onSubmit={(e) => {
                 e.preventDefault();
                 passwordAction.run(async () => {
-                  await api('/api/auth/password', { method: 'POST', body: { currentPassword, newPassword } });
+                  await api('/api/auth/password', {
+                    method: 'POST',
+                    body: { currentPassword, newPassword },
+                  });
                   setCurrentPassword('');
                   setNewPassword('');
                   return 'Password changed. Your other devices have been signed out.';
@@ -183,7 +200,7 @@ export function SettingsModal({
               }}
             >
               <span className="text-xs text-stone-300 flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5" /> Change your password
+                <Lock className="w-3.5 h-3.5 text-stone-400" /> Change your password
               </span>
               <input
                 type="password"
@@ -201,14 +218,22 @@ export function SettingsModal({
                 onChange={(e) => setNewPassword(e.target.value)}
                 className={inputClass}
               />
-              <button type="submit" disabled={passwordAction.busy || !currentPassword || !newPassword} className={buttonClass}>
+              <button
+                type="submit"
+                disabled={passwordAction.busy || !currentPassword || !newPassword}
+                className={buttonClass}
+              >
                 Change password
               </button>
               {passwordAction.view}
             </form>
 
-            <button type="button" onClick={signOut} className={`${buttonClass} w-full flex items-center justify-center gap-2`}>
-              <LogOut className="w-4 h-4" /> Sign out
+            <button
+              type="button"
+              onClick={signOut}
+              className={`${buttonClass} w-full flex items-center justify-center gap-2`}
+            >
+              <LogOut className="w-4 h-4 text-stone-400" /> Sign out
             </button>
           </section>
 
@@ -226,7 +251,11 @@ export function SettingsModal({
                   partnerAction.run(async () => {
                     await api('/api/auth/password', {
                       method: 'POST',
-                      body: { currentPassword: resetOwnPassword, newPassword: partnerPassword, forUserId: partner.id },
+                      body: {
+                        currentPassword: resetOwnPassword,
+                        newPassword: partnerPassword,
+                        forUserId: partner.id,
+                      },
                     });
                     setResetOwnPassword('');
                     setPartnerPassword('');
@@ -250,7 +279,11 @@ export function SettingsModal({
                   onChange={(e) => setPartnerPassword(e.target.value)}
                   className={inputClass}
                 />
-                <button type="submit" disabled={partnerAction.busy || !resetOwnPassword || !partnerPassword} className={buttonClass}>
+                <button
+                  type="submit"
+                  disabled={partnerAction.busy || !resetOwnPassword || !partnerPassword}
+                  className={buttonClass}
+                >
                   Reset {partner.name}&apos;s password
                 </button>
                 {partnerAction.view}
@@ -260,9 +293,12 @@ export function SettingsModal({
 
           {/* Shared preferences */}
           <section className={cardClass}>
-            <h3 className={titleClass}>Shared settings</h3>
-            <div className="space-y-1">
-              <span className="text-xs text-stone-300">Currency for new wines</span>
+            <h3 className={titleClass}>
+              <Sliders className="w-3.5 h-3.5 text-champagne-gold" />
+              <span>Shared settings</span>
+            </h3>
+            <div className="space-y-1.5">
+              <span className="text-xs text-stone-400">Currency for new wines</span>
               <div className="grid grid-cols-4 gap-2">
                 {['£', '$', '€', 'A$'].map((curr) => (
                   <button
@@ -270,10 +306,10 @@ export function SettingsModal({
                     type="button"
                     aria-pressed={settings.defaultCurrency === curr}
                     onClick={() => saveSettings({ defaultCurrency: curr }, 'Currency saved.')}
-                    className={`py-2.5 rounded-xl text-sm font-bold border ${
+                    className={`py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
                       settings.defaultCurrency === curr
-                        ? 'bg-champagne-950 text-champagne-accent border-champagne-500/50'
-                        : 'bg-black/70 border-white/10 text-stone-300'
+                        ? 'bg-wine-800/90 text-champagne-50 border-champagne-400/45'
+                        : 'bg-cellar-950/70 border-white/10 text-stone-300 hover:border-white/20'
                     }`}
                   >
                     {curr}
@@ -283,15 +319,15 @@ export function SettingsModal({
             </div>
 
             <form
-              className="space-y-2 pt-2 border-t border-white/10"
+              className="space-y-2 pt-3 border-t border-white/[0.07]"
               onSubmit={(e) => {
                 e.preventDefault();
                 saveSettings({ geminiApiKey }, 'Gemini key saved.');
                 setGeminiApiKey('');
               }}
             >
-              <span className="text-xs text-stone-300 block">
-                Gemini API key (optional): reads wine labels from your photos.
+              <span className="text-xs text-stone-300 block leading-relaxed">
+                Gemini API key (optional): reads wine labels &amp; suggests bottles.
                 {settings.geminiKeyFromEnv && ' A key is set on the server; one saved here takes priority.'}
                 {settings.hasGeminiKey && !settings.geminiKeyFromEnv && ' A key is saved.'}
               </span>
@@ -304,7 +340,11 @@ export function SettingsModal({
                   autoComplete="off"
                   className={`${inputClass} font-mono`}
                 />
-                <button type="submit" disabled={prefsAction.busy || !geminiApiKey.trim()} className={buttonClass}>
+                <button
+                  type="submit"
+                  disabled={prefsAction.busy || !geminiApiKey.trim()}
+                  className={buttonClass}
+                >
                   Save
                 </button>
               </div>
@@ -312,7 +352,7 @@ export function SettingsModal({
                 <button
                   type="button"
                   onClick={() => saveSettings({ geminiApiKey: '' }, 'Gemini key removed.')}
-                  className="text-xs text-stone-400 underline"
+                  className="text-xs text-stone-400 hover:text-stone-200 underline underline-offset-2"
                 >
                   Remove the saved key
                 </button>
@@ -323,17 +363,29 @@ export function SettingsModal({
 
           {/* Backup */}
           <section className={cardClass}>
-            <h3 className={titleClass}>Backup</h3>
-            <p className="text-xs text-stone-300">
-              Downloads every wine, rating and comment as a file. Photos stay on the server&apos;s photo volume.
+            <h3 className={titleClass}>
+              <Download className="w-3.5 h-3.5 text-champagne-gold" />
+              <span>Backup</span>
+            </h3>
+            <p className="text-xs text-stone-400 leading-relaxed">
+              Downloads every wine, rating and comment as JSON. Photos stay on the server&apos;s photo volume.
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <a href="/api/export" download className={`${buttonClass} flex items-center justify-center gap-1.5`}>
+              <a
+                href="/api/export"
+                download
+                className={`${buttonClass} flex items-center justify-center gap-1.5`}
+              >
                 <Download className="w-4 h-4 text-champagne-300" /> Export
               </a>
               <label className={`${buttonClass} flex items-center justify-center gap-1.5 cursor-pointer`}>
                 <Upload className="w-4 h-4 text-champagne-300" /> Restore
-                <input type="file" accept=".json,application/json" className="hidden" onChange={handleImportFile} />
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  className="hidden"
+                  onChange={handleImportFile}
+                />
               </label>
             </div>
             {backupAction.view}

@@ -3,88 +3,91 @@
 import React from 'react';
 import { Wine, Plus, BarChart3, ShoppingBag, Camera, Sparkles } from 'lucide-react';
 
-export type TabType = 'journal' | 'recommendations' | 'shopping' | 'stats';
+export type TabType = 'journal' | 'shopping' | 'recommendations' | 'stats';
 
 interface BottomNavProps {
   activeTab: TabType;
   onSelectTab: (tab: TabType) => void;
   onOpenAddModal: () => void;
+  pendingCount?: number;
 }
 
 export function BottomNav({
   activeTab,
   onSelectTab,
   onOpenAddModal,
+  pendingCount = 0,
 }: BottomNavProps) {
-  return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto glass-nav px-2 min-[375px]:px-3 pt-2.5 pb-safe border-t border-champagne-500/20">
-      <div className="flex items-center justify-between relative">
-        {/* Tab 1: Journal */}
-        <button
-          onClick={() => onSelectTab('journal')}
-          className={`flex flex-col items-center gap-1 py-1 px-1.5 min-[375px]:px-3 rounded-xl transition-all font-sans ${
-            activeTab === 'journal'
-              ? 'text-champagne-gold font-semibold'
-              : 'text-stone-300 hover:text-white font-medium'
-          }`}
-        >
-          <Wine className={`w-5 h-5 ${activeTab === 'journal' ? 'scale-105 text-champagne-gold' : ''}`} />
-          <span className="text-[11px] tracking-wide whitespace-nowrap">Journal</span>
-        </button>
+  const navBtnClass = (isActive: boolean) =>
+    `flex flex-col items-center justify-center gap-1 py-1.5 px-2 min-[380px]:px-3.5 rounded-xl transition-all font-sans relative ${
+      isActive ? 'text-champagne-gold font-semibold' : 'text-stone-400 hover:text-stone-100 font-medium'
+    }`;
 
-        {/* Tab 2: For You / Recommended */}
+  return (
+    <nav className="fixed bottom-0 inset-x-0 z-40 glass-bar border-t border-white/[0.08] pb-safe">
+      <div className="max-w-2xl mx-auto px-2 min-[380px]:px-4 pt-2 flex items-center justify-between relative">
+        {/* Tab 1: Cellar */}
         <button
-          onClick={() => onSelectTab('recommendations')}
-          className={`flex flex-col items-center gap-1 py-1 px-1.5 min-[375px]:px-3 rounded-xl transition-all relative font-sans ${
-            activeTab === 'recommendations'
-              ? 'text-champagne-gold font-semibold'
-              : 'text-stone-300 hover:text-white font-medium'
-          }`}
+          type="button"
+          onClick={() => onSelectTab('journal')}
+          className={navBtnClass(activeTab === 'journal')}
         >
           <div className="relative">
-            <Sparkles className={`w-5 h-5 ${activeTab === 'recommendations' ? 'scale-105 text-champagne-gold' : ''}`} />
-            <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-champagne-gold shadow-[0_0_8px_#d4af37]" />
+            <Wine className={`w-5 h-5 transition-transform ${activeTab === 'journal' ? 'scale-105 text-champagne-gold' : ''}`} />
+            {pendingCount > 0 && (
+              <span
+                aria-label={`${pendingCount} awaiting your rating`}
+                className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-wine-600 border border-champagne-400/50 text-[10px] font-bold text-champagne-50 flex items-center justify-center tabular-nums"
+              >
+                {pendingCount > 9 ? '9+' : pendingCount}
+              </span>
+            )}
           </div>
-          <span className="text-[11px] tracking-wide whitespace-nowrap">For You</span>
+          <span className="text-[11px] tracking-wide whitespace-nowrap">Cellar</span>
         </button>
 
-        {/* Center Floating Action Button: Add & Scan Wine */}
-        <div className="relative -top-5 flex justify-center">
+        {/* Tab 2: Shop / Aisle Guide */}
+        <button
+          type="button"
+          onClick={() => onSelectTab('shopping')}
+          className={navBtnClass(activeTab === 'shopping')}
+        >
+          <ShoppingBag className={`w-5 h-5 transition-transform ${activeTab === 'shopping' ? 'scale-105 text-champagne-gold' : ''}`} />
+          <span className="text-[11px] tracking-wide whitespace-nowrap">Shop</span>
+        </button>
+
+        {/* Center Floating Action Button: Log / Scan Bottle */}
+        <div className="relative -mt-6 flex justify-center">
           <button
+            type="button"
             onClick={onOpenAddModal}
-            className="w-14 h-14 rounded-full bg-gradient-to-tr from-wine-900 via-wine-800 to-black flex items-center justify-center text-champagne-light shadow-2xl border-2 border-champagne-500/50 active:scale-95 transition-transform hover:shadow-gold-glow group"
+            className="w-14 h-14 rounded-full bg-wine-700 hover:bg-wine-600 flex items-center justify-center text-champagne-50 border-2 border-champagne-400/45 shadow-[0_8px_24px_rgba(126,29,52,0.55)] active:scale-95 transition-all group"
             aria-label="Scan or add wine"
           >
             <div className="relative flex items-center justify-center">
-              <Camera className="w-6 h-6 text-champagne-accent group-hover:scale-105 transition-transform" />
-              <Plus className="w-3.5 h-3.5 absolute -top-1 -right-1 text-champagne-gold" />
+              <Camera className="w-5 h-5 text-champagne-100 group-hover:scale-105 transition-transform" />
+              <Plus className="w-3.5 h-3.5 absolute -top-1.5 -right-2 text-champagne-gold stroke-[2.5]" />
             </div>
           </button>
         </div>
 
-        {/* Tab 3: Buy again & wishlist */}
+        {/* Tab 3: Discover / AI Sommelier */}
         <button
-          onClick={() => onSelectTab('shopping')}
-          className={`flex flex-col items-center gap-1 py-1 px-1.5 min-[375px]:px-3 rounded-xl transition-all relative font-sans ${
-            activeTab === 'shopping'
-              ? 'text-champagne-gold font-semibold'
-              : 'text-stone-300 hover:text-white font-medium'
-          }`}
+          type="button"
+          onClick={() => onSelectTab('recommendations')}
+          className={navBtnClass(activeTab === 'recommendations')}
         >
-          <ShoppingBag className={`w-5 h-5 ${activeTab === 'shopping' ? 'scale-105 text-champagne-gold' : ''}`} />
-          <span className="text-[11px] tracking-wide whitespace-nowrap">Shopping</span>
+          <Sparkles className={`w-5 h-5 transition-transform ${activeTab === 'recommendations' ? 'scale-105 text-champagne-gold' : ''}`} />
+          <span className="text-[11px] tracking-wide whitespace-nowrap">Discover</span>
         </button>
 
-        {/* Tab 4: Stats / Insights */}
+        {/* Tab 4: Insights */}
         <button
+          type="button"
           onClick={() => onSelectTab('stats')}
-          className={`flex flex-col items-center gap-1 py-1 px-1.5 min-[375px]:px-3 rounded-xl transition-all font-sans ${
-            activeTab === 'stats'
-              ? 'text-champagne-gold font-semibold'
-              : 'text-stone-300 hover:text-white font-medium'
-          }`}
+          className={navBtnClass(activeTab === 'stats')}
         >
-          <BarChart3 className={`w-5 h-5 ${activeTab === 'stats' ? 'scale-105 text-champagne-gold' : ''}`} />
+          <BarChart3 className={`w-5 h-5 transition-transform ${activeTab === 'stats' ? 'scale-105 text-champagne-gold' : ''}`} />
           <span className="text-[11px] tracking-wide whitespace-nowrap">Insights</span>
         </button>
       </div>

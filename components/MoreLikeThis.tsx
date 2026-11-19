@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { RecommendationSet, WineRecommendation } from '@/lib/recommendations';
 import { api, isAbort, retryWhileBusy } from '@/lib/api-client';
+import { WINE_TYPE_META } from '@/lib/wine-meta';
 import { StillTrying } from '@/components/StillTrying';
 import { timeAgo } from '@/lib/format';
 import { Sparkles, Bookmark, RefreshCw, ExternalLink } from 'lucide-react';
@@ -72,20 +73,19 @@ export function MoreLikeThis({ wineId, wishlistNames, onAddToWishlist }: MoreLik
     }
   };
 
-  const sectionTitle = 'text-[11px] font-bold uppercase tracking-wider text-champagne-300';
-
   return (
     <section className="space-y-2.5">
       <div className="flex items-center justify-between gap-2">
-        <h3 className={`${sectionTitle} flex items-center gap-1.5`}>
+        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-champagne-300 flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-champagne-gold" />
           More like this
         </h3>
         {set && (
           <button
+            type="button"
             onClick={generate}
             disabled={generating}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-stone-900 border border-white/10 text-[11px] font-semibold text-stone-200 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg btn-secondary text-[11px] font-semibold disabled:opacity-50"
           >
             <RefreshCw className={`w-3 h-3 ${generating ? 'animate-spin' : ''}`} />
             {generating ? 'Thinking…' : status?.stale ? 'Update' : 'New ideas'}
@@ -94,12 +94,16 @@ export function MoreLikeThis({ wineId, wishlistNames, onAddToWishlist }: MoreLik
       </div>
 
       {error && (
-        <p className="p-3 rounded-xl bg-rose-950/40 border border-rose-500/40 text-xs text-rose-100" role="alert">
+        <p className="p-3 rounded-xl bg-rose-500/10 border border-rose-400/25 text-xs text-rose-200" role="alert">
           {error}
         </p>
       )}
 
-      {generating && <StillTrying label="Finding similar wines" attempt={attempt} onCancel={() => abortRef.current?.abort()} />}
+      {generating && (
+        <div className="p-3.5 rounded-2xl surface-card">
+          <StillTrying label="Finding similar wines" attempt={attempt} onCancel={() => abortRef.current?.abort()} />
+        </div>
+      )}
 
       {!status && !error ? (
         <p className="text-xs text-stone-400">Loading…</p>
@@ -108,12 +112,13 @@ export function MoreLikeThis({ wineId, wishlistNames, onAddToWishlist }: MoreLik
           <p className="text-xs text-stone-400">Add a Gemini key in Settings to get suggestions for wines like this one.</p>
         ) : generating ? null : (
           <button
+            type="button"
             onClick={generate}
             disabled={generating}
-            className="w-full py-3 rounded-xl bg-stone-900/80 border border-champagne-500/30 text-sm font-semibold text-champagne-100 flex items-center justify-center gap-2 disabled:opacity-60"
+            className="w-full py-3 rounded-xl surface-card hover:border-champagne-400/35 text-sm font-semibold text-champagne-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
           >
-            {generating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-champagne-gold" />}
-            {generating ? 'Finding similar wines…' : 'Find wines that taste like this'}
+            <Sparkles className="w-4 h-4 text-champagne-gold" />
+            <span>Find wines that taste like this</span>
           </button>
         )
       ) : (
@@ -121,29 +126,40 @@ export function MoreLikeThis({ wineId, wishlistNames, onAddToWishlist }: MoreLik
           <ul className="space-y-2">
             {set.recommendations.map((rec) => {
               const saved = wishlistNames.includes(rec.name.toLowerCase());
+              const typeMeta = WINE_TYPE_META[rec.type] || WINE_TYPE_META.red;
               return (
-                <li key={rec.id} className="p-3 rounded-2xl bg-stone-900/60 border border-white/10 space-y-1.5">
-                  <div className="flex items-start justify-between gap-2">
+                <li
+                  key={rec.id}
+                  className="p-3.5 rounded-2xl surface-card space-y-2 relative overflow-hidden"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`absolute left-0 top-0 bottom-0 w-[3px] ${typeMeta.barClass}`}
+                  />
+                  <div className="flex items-start justify-between gap-2 pl-1">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-stone-100 leading-snug">{rec.name}</p>
+                      <p className="font-serif text-lg font-semibold text-champagne-50 leading-snug">{rec.name}</p>
                       <p className="text-xs text-stone-400 truncate">
                         {[rec.producer, rec.grape, rec.country].filter(Boolean).join(' · ')}
                       </p>
                     </div>
                     {rec.estimatedPrice > 0 && (
-                      <span className="text-xs font-bold text-champagne-accent flex-shrink-0">
+                      <span className="text-xs font-semibold text-champagne-200 flex-shrink-0 tabular-nums">
                         ~{rec.currency}
                         {rec.estimatedPrice.toFixed(2)}
                       </span>
                     )}
                   </div>
-                  {rec.reason && <p className="text-xs text-stone-200 leading-relaxed">{rec.reason}</p>}
-                  <div className="flex items-center gap-2 pt-0.5">
+                  {rec.reason && <p className="text-xs text-stone-300 leading-relaxed pl-1">{rec.reason}</p>}
+                  <div className="flex items-center gap-2 pt-0.5 pl-1">
                     <button
+                      type="button"
                       onClick={() => onAddToWishlist(rec)}
                       aria-pressed={saved}
-                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-1 border ${
-                        saved ? 'bg-champagne-950 text-champagne-accent border-champagne-500/45' : 'bg-black/40 text-stone-200 border-white/15'
+                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-1 border transition-colors ${
+                        saved
+                          ? 'bg-wine-800/80 text-champagne-100 border-champagne-400/40'
+                          : 'bg-cellar-950/70 text-stone-200 border-white/10 hover:border-white/20'
                       }`}
                     >
                       <Bookmark className={`w-3 h-3 ${saved ? 'fill-champagne-gold text-champagne-gold' : ''}`} />
@@ -154,7 +170,7 @@ export function MoreLikeThis({ wineId, wishlistNames, onAddToWishlist }: MoreLik
                         href={rec.onlineLinks.wineSearcher}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-2.5 py-1.5 rounded-lg bg-black/40 border border-white/15 text-[11px] text-stone-200 flex items-center gap-1"
+                        className="px-2.5 py-1.5 rounded-lg bg-cellar-950/70 border border-white/10 hover:border-white/20 text-[11px] text-stone-200 flex items-center gap-1 transition-colors"
                       >
                         Find it
                         <ExternalLink className="w-3 h-3 text-stone-400" />

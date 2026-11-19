@@ -2,23 +2,25 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Wine, UserSettings, PublicUser, isTasted } from '@/lib/types';
-import { WineRecommendation, bothLiked } from '@/lib/recommendations';
+import { WineRecommendation } from '@/lib/recommendations';
 import { api, createWineApi, updateWineApi, WineSubmission } from '@/lib/api-client';
-import { awaitingRating, ReviewInput } from '@/lib/wine-logic';
+import { awaitingRating, reviewStatus, ReviewInput } from '@/lib/wine-logic';
+import { canonicalShop } from '@/lib/shops';
 import { Navbar } from '@/components/Navbar';
 import { BottomNav, TabType } from '@/components/BottomNav';
-import { FilterBar } from '@/components/FilterBar';
+import { FilterBar, SortOption } from '@/components/FilterBar';
 import { WineCard } from '@/components/WineCard';
 import { WineDetailModal } from '@/components/WineDetailModal';
 import { AddWineModal } from '@/components/AddWineModal';
-import { CoupleStatsModal } from '@/components/CoupleStatsModal';
+import { InsightsView } from '@/components/InsightsView';
 import { SettingsModal } from '@/components/SettingsModal';
 import { RecommendedSection } from '@/components/RecommendedSection';
-import { customShopsFrom } from '@/components/ShopPicker';
+import { customShopsFrom, popularShopsFrom } from '@/components/ShopPicker';
 import { ShopSheet } from '@/components/ShopSheet';
 import { RateSheet } from '@/components/RateSheet';
 import { ShoppingList } from '@/components/ShoppingList';
-import { Wine as WineIcon, Sparkles, Plus, ArrowUpDown, ChevronRight, Heart } from 'lucide-react';
+import { Toast, ToastState } from '@/components/Toast';
+import { Wine as WineIcon, Plus, ChevronRight, Heart } from 'lucide-react';
 
 interface CellarAppProps {
   me: PublicUser;
@@ -42,25 +44,29 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
   const [settings, setSettings] = useState<UserSettings>(INITIAL_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
 
   // Tab & filters
   const [activeTab, setActiveTab] = useState<TabType>('journal');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
   const [activeVerdict, setActiveVerdict] = useState('all');
   const [activeType, setActiveType] = useState('all');
-  const [sortBy, setSortBy] = useState<'newest' | 'rating' | 'price-low' | 'price-high'>('newest');
+  const [activeShop, setActiveShop] = useState('all');
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
 
-  // Sheets
+  // Sheets & Modals
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // A shop whose wines are listed in the shop sheet.
   const [shopView, setShopView] = useState<string | null>(null);
   const [editingWine, setEditingWine] = useState<Wine | null>(null);
   const [draft, setDraft] = useState<Partial<Wine> | null>(null);
+  const [addMode, setAddMode] = useState<'tasted' | 'wishlist'>('tasted');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [rateQueue, setRateQueue] = useState<Wine[] | null>(null);
+  const [rateSession, setRateSession] = useState<{ queue: Wine[]; startAtSummary?: boolean } | null>(null);
+
+  const notify = useCallback((message: string, tone: ToastState['tone'] = 'info') => {
+    setToast({ message, tone });
+  }, []);
 
   // Always show the latest copy of the open wine, e.g. after a refresh
   // brings in your partner's comment.
@@ -69,7 +75,6 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
   // Untasted wishlist picks have no verdict or rating, so they stay out of the
   // journal, counts, stats and the recommendation engine.
   const tastedWines = useMemo(() => wines.filter(isTasted), [wines]);
-  const sharedFavourites = useMemo(() => bothLiked(wines).length, [wines]);
   const myTurn = useMemo(() => wines.filter((w) => awaitingRating(w, me.slot)), [wines, me.slot]);
 
   const loadWines = useCallback(async () => {
@@ -111,18 +116,29 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
   }, [loadWines]);
 
   const upsert = (saved: Wine) =>
-    setWines((prev) => (prev.some((w) => w.id === saved.id) ? prev.map((w) => (w.id === saved.id ? saved : w)) : [saved, ...prev]));
+    setWines((prev) =>
+      prev.some((w) => w.id === saved.id) ? prev.map((w) => (w.id === saved.id ? saved : w)) : [saved, ...prev]
+    );
 
   const handleSubmitWine = async (submission: WineSubmission, existingId?: string) => {
     const saved = existingId ? await updateWineApi(existingId, submission) : await createWineApi(submission);
     upsert(saved);
+    notify(
+      existingId
+        ? 'Bottle updated.'
+        : saved.tasted === false
+          ? 'Saved to your To Try list.'
+          : 'Bottle logged to your cellar.',
+      'success'
+    );
   };
 
-  const quickUpdate = async (wine: Wine, changes: WineSubmission['changes']) => {
+  const quickUpdate = async (wine: Wine, changes: WineSubmission['changes'], okMessage?: string) => {
     try {
       upsert(await updateWineApi(wine.id, { changes }));
+      if (okMessage) notify(okMessage, 'success');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'That change was not saved.');
+      notify(err instanceof Error ? err.message : 'That change was not saved.', 'error');
     }
   };
 
@@ -134,6 +150,7 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
     await api(`/api/wines/${encodeURIComponent(wine.id)}`, { method: 'DELETE' });
     setWines((prev) => prev.filter((w) => w.id !== wine.id));
     setSelectedId(null);
+    notify('Bottle deleted.', 'info');
   };
 
   const handleAddComment = async (wine: Wine, text: string) => {
@@ -166,7 +183,12 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
   const handleAddRecommendationToWishlist = async (rec: WineRecommendation) => {
     const existing = wines.find((w) => w.name.toLowerCase() === rec.name.toLowerCase());
     if (existing) {
-      await quickUpdate(existing, { wishlist: !existing.wishlist });
+      const nextWishlist = !existing.wishlist;
+      await quickUpdate(
+        existing,
+        { wishlist: nextWishlist },
+        nextWishlist ? 'Added to To Try list.' : 'Removed from To Try list.'
+      );
       return;
     }
     try {
@@ -186,34 +208,45 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
           },
         })
       );
+      notify(`Saved ${rec.name} to To Try.`, 'success');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Not added to the wishlist.');
+      notify(err instanceof Error ? err.message : 'Not added to the wishlist.', 'error');
     }
   };
 
-  const openAdd = (opts: { editing?: Wine; draft?: Partial<Wine> } = {}) => {
+  const openAdd = (opts: { editing?: Wine; draft?: Partial<Wine>; mode?: 'tasted' | 'wishlist' } = {}) => {
     setEditingWine(opts.editing ?? null);
     setDraft(opts.draft ?? null);
+    setAddMode(opts.mode ?? 'tasted');
     setIsAddModalOpen(true);
   };
 
-  const handleSelectTab = (tab: TabType) => {
-    if (tab === 'stats') setIsStatsModalOpen(true);
-    else setActiveTab(tab);
-  };
-
-  // Counts for the filter pills
-  const counts = useMemo(() => {
+  // Counts for verdict & style filter strips
+  const verdictCounts = useMemo(() => {
     const c: Record<string, number> = { all: tastedWines.length };
     for (const w of tastedWines) c[w.coupleVerdict] = (c[w.coupleVerdict] || 0) + 1;
     return c;
   }, [tastedWines]);
 
+  const typeCounts = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const w of tastedWines) c[w.type] = (c[w.type] || 0) + 1;
+    return c;
+  }, [tastedWines]);
+
+  const tastedShops = useMemo(() => {
+    const set = new Set<string>();
+    for (const w of tastedWines) {
+      const s = canonicalShop(w.purchase?.store);
+      if (s) set.add(s);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [tastedWines]);
+
   const filteredWines = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return wines
+    return tastedWines
       .filter((w) => {
-        if (!isTasted(w)) return false;
         if (
           q &&
           ![w.name, w.producer, w.grape, w.region, w.country, w.purchase?.store, w.jointNotes]
@@ -222,8 +255,9 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         ) {
           return false;
         }
-        if (activeVerdict !== 'all' && (!isTasted(w) || w.coupleVerdict !== activeVerdict)) return false;
+        if (activeVerdict !== 'all' && w.coupleVerdict !== activeVerdict) return false;
         if (activeType !== 'all' && w.type !== activeType) return false;
+        if (activeShop !== 'all' && canonicalShop(w.purchase?.store) !== activeShop) return false;
         return true;
       })
       .sort((a, b) => {
@@ -232,7 +266,7 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         if (sortBy === 'price-high') return (b.purchase?.price || 0) - (a.purchase?.price || 0);
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
-  }, [wines, searchQuery, activeVerdict, activeType, sortBy]);
+  }, [tastedWines, searchQuery, activeVerdict, activeType, activeShop, sortBy]);
 
   // The shopping tab honours the search box too.
   const searchedWines = useMemo(() => {
@@ -246,8 +280,16 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
   }, [wines, searchQuery]);
 
   const customShops = useMemo(() => customShopsFrom(wines.map((w) => w.purchase?.store)), [wines]);
+  const popularShops = useMemo(() => popularShopsFrom(wines.map((w) => w.purchase?.store), 6), [wines]);
   const wishlistWineNames = useMemo(() => wines.filter((w) => w.wishlist).map((w) => w.name.toLowerCase()), [wines]);
-  const filtersActive = Boolean(searchQuery || activeVerdict !== 'all' || activeType !== 'all');
+  const filtersActive = Boolean(searchQuery || activeVerdict !== 'all' || activeType !== 'all' || activeShop !== 'all');
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setActiveVerdict('all');
+    setActiveType('all');
+    setActiveShop('all');
+  };
 
   // Names come from the accounts; settings only fills them in once loaded.
   const namedSettings: UserSettings = {
@@ -261,121 +303,182 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
       <Navbar
         me={me}
         partner={partner}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        showSearch={showSearch}
-        onToggleSearch={() => setShowSearch(!showSearch)}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
       />
 
-      <main className="flex-1 px-4 py-3 space-y-3.5 font-sans pb-28">
+      <main className="flex-1 px-4 py-4 space-y-4 font-sans pb-28">
         {loadError && (
-          <div className="p-3 rounded-2xl bg-rose-950/50 border border-rose-500/40 text-sm text-rose-100 flex items-center justify-between gap-3">
+          <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-400/35 text-xs text-rose-100 flex items-center justify-between gap-3">
             <span>{loadError}</span>
-            <button onClick={loadWines} className="underline font-semibold flex-shrink-0">
+            <button type="button" onClick={loadWines} className="underline font-semibold flex-shrink-0">
               Retry
             </button>
           </div>
         )}
 
         {activeTab === 'shopping' ? (
-          <>
-            <h2 className="font-serif text-2xl text-stone-100 font-semibold px-1">Shopping</h2>
-            <ShoppingList
-              wines={searchedWines}
-              me={me}
-              partner={partner}
-              onOpen={(w) => setSelectedId(w.id)}
-              onShopClick={setShopView}
-            />
-          </>
+          <ShoppingList
+            wines={searchedWines}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            me={me}
+            partner={partner}
+            onOpen={(w) => setSelectedId(w.id)}
+            onShopClick={setShopView}
+            onLogWishlistWine={(w) => openAdd({ editing: w })}
+            onAddToWishlist={() => openAdd({ mode: 'wishlist' })}
+          />
         ) : activeTab === 'recommendations' ? (
           <RecommendedSection
             settings={namedSettings}
             onAddToWishlist={handleAddRecommendationToWishlist}
-            onLogAsTasted={(rec) => openAdd({ draft: recommendationDraft(rec) })}
+            onLogAsTasted={(rec) => openAdd({ draft: recommendationDraft(rec), mode: 'tasted' })}
             onOpenSettings={() => setIsSettingsModalOpen(true)}
             wishlistWineNames={wishlistWineNames}
           />
+        ) : activeTab === 'stats' ? (
+          <InsightsView
+            wines={tastedWines}
+            me={me}
+            partner={partner}
+            settings={namedSettings}
+            onSelectWine={(w) => setSelectedId(w.id)}
+            onShopClick={setShopView}
+          />
         ) : (
           <>
-            {/* Wines your partner logged that you haven't rated */}
-            {activeTab === 'journal' && myTurn.length > 0 && (
+            {/* Awaiting Your Verdict Deck Card */}
+            {myTurn.length > 0 && (
               <button
-                onClick={() => setRateQueue(myTurn)}
-                className="w-full p-3.5 rounded-2xl bg-wine-950/80 border border-champagne-500/45 flex items-center justify-between gap-3 text-left shadow-md"
+                type="button"
+                onClick={() => setRateSession({ queue: myTurn, startAtSummary: false })}
+                className="w-full p-4 rounded-2xl surface-highlight flex items-center justify-between gap-3 text-left transition-all hover:border-champagne-400/50 active:scale-[0.99]"
               >
-                <span className="flex items-center gap-3 min-w-0">
-                  <span className="w-10 h-10 flex-shrink-0 rounded-xl bg-black/60 border border-champagne-500/35 flex items-center justify-center text-champagne-gold">
-                    <Heart className="w-4 h-4" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-bold text-stone-100">Your turn to rate</span>
-                    <span className="block text-xs text-stone-300 truncate">
-                      {myTurn.length === 1 ? myTurn[0].name : `${myTurn.length} wines`}
-                      {partner ? ` ${partner.name} logged` : ''}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center -space-x-2 flex-shrink-0">
+                    {myTurn.slice(0, 3).map((w) => (
+                      <div
+                        key={w.id}
+                        className="w-10 h-12 rounded-lg overflow-hidden bg-cellar-950 border border-champagne-400/35 flex items-center justify-center shadow-md"
+                      >
+                        {w.imageUrl ? (
+                          <img src={w.imageUrl} alt={w.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Heart className="w-4 h-4 text-champagne-gold" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="min-w-0">
+                    <span className="inline-block text-[11px] font-semibold uppercase tracking-wider text-champagne-gold">
+                      Awaiting your verdict
                     </span>
-                  </span>
-                </span>
-                <ChevronRight className="w-4 h-4 text-champagne-400 flex-shrink-0" />
+                    <span className="block font-serif text-lg font-semibold text-champagne-50 leading-tight truncate">
+                      {myTurn.length === 1
+                        ? `Rate ${myTurn[0].name}`
+                        : `${myTurn.length} bottles ready to swipe`}
+                    </span>
+                    <span className="block text-xs text-stone-300 truncate mt-0.5">
+                      {partner ? `${partner.name} logged` : 'Logged'} · Tap to swipe &amp; reveal
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-champagne-300 flex-shrink-0" />
               </button>
             )}
 
-            {activeTab === 'journal' && sharedFavourites > 0 && myTurn.length === 0 && (
-              <button
-                onClick={() => setActiveTab('recommendations')}
-                className="w-full p-3.5 rounded-2xl luxury-card flex items-center justify-between gap-3 text-left"
-              >
-                <span className="flex items-center gap-3 min-w-0">
-                  <span className="w-10 h-10 flex-shrink-0 rounded-xl bg-wine-900/70 border border-champagne-500/35 flex items-center justify-center text-champagne-gold">
-                    <Sparkles className="w-4 h-4" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-bold text-stone-100">Ideas for your next bottle</span>
-                    <span className="block text-xs text-stone-300 truncate">Suggestions based on wines you both liked</span>
-                  </span>
-                </span>
-                <ChevronRight className="w-4 h-4 text-champagne-400 flex-shrink-0" />
-              </button>
+            {/* Quick Verdict Summary Strip */}
+            {tastedWines.length > 0 && (
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    {
+                      id: 'loved-it',
+                      label: 'Buy Again',
+                      count: verdictCounts['loved-it'] ?? 0,
+                      dotClass: 'bg-emerald-400',
+                      activeClass: 'bg-emerald-500/15 border-emerald-400/40 text-emerald-200',
+                    },
+                    {
+                      id: 'good-value',
+                      label: 'Great Value',
+                      count: verdictCounts['good-value'] ?? 0,
+                      dotClass: 'bg-sky-400',
+                      activeClass: 'bg-sky-500/15 border-sky-400/40 text-sky-200',
+                    },
+                    {
+                      id: 'bad',
+                      label: 'Avoid',
+                      count: verdictCounts['bad'] ?? 0,
+                      dotClass: 'bg-rose-400',
+                      activeClass: 'bg-rose-500/15 border-rose-400/40 text-rose-200',
+                    },
+                  ] as const
+                ).map((item) => {
+                  const selected = activeVerdict === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActiveVerdict(selected ? 'all' : item.id)}
+                      aria-pressed={selected}
+                      className={`px-3 py-2.5 rounded-2xl border text-left transition-all ${
+                        selected
+                          ? item.activeClass
+                          : 'surface-card hover:border-white/20 text-stone-200'
+                      }`}
+                    >
+                      <span className="flex items-center gap-1.5 text-[11px] font-medium text-stone-400">
+                        <span className={`w-1.5 h-1.5 rounded-full ${item.dotClass}`} />
+                        <span className="truncate">{item.label}</span>
+                      </span>
+                      <span className="block font-serif text-xl font-bold tabular-nums mt-0.5">
+                        {item.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             )}
 
-            {activeTab === 'journal' && (
-              <FilterBar
-                activeVerdict={activeVerdict}
-                onSelectVerdict={setActiveVerdict}
-                activeType={activeType}
-                onSelectType={setActiveType}
-                counts={counts}
-              />
-            )}
-
-            <div className="flex items-center justify-between text-xs text-stone-300 px-1">
-              <span>
-                <strong>{filteredWines.length}</strong> {filteredWines.length === 1 ? 'bottle' : 'bottles'}
-              </span>
-              <label className="flex items-center gap-1.5">
-                <ArrowUpDown className="w-3.5 h-3.5 text-champagne-400" />
-                <span className="sr-only">Sort by</span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                  className="bg-transparent text-stone-200 font-medium focus:outline-none cursor-pointer"
-                >
-                  <option value="newest" className="bg-[#0f0a0d]">Newest first</option>
-                  <option value="rating" className="bg-[#0f0a0d]">Highest rated</option>
-                  <option value="price-low" className="bg-[#0f0a0d]">Cheapest first</option>
-                  <option value="price-high" className="bg-[#0f0a0d]">Priciest first</option>
-                </select>
-              </label>
-            </div>
+            <FilterBar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              activeVerdict={activeVerdict}
+              onSelectVerdict={setActiveVerdict}
+              activeType={activeType}
+              onSelectType={setActiveType}
+              activeShop={activeShop}
+              onSelectShop={setActiveShop}
+              shops={tastedShops}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              verdictCounts={verdictCounts}
+              typeCounts={typeCounts}
+              totalFiltered={filteredWines.length}
+              filtersActive={filtersActive}
+              onResetFilters={resetFilters}
+            />
 
             {isLoading ? (
-              <div className="py-20 text-center space-y-3">
-                <WineIcon className="w-10 h-10 text-champagne-500/40 animate-pulse mx-auto" />
-                <p className="text-xs text-stone-300">Loading your cellar…</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5" aria-label="Loading cellar">
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="surface-card rounded-2xl p-3.5 flex gap-3.5 animate-pulse"
+                  >
+                    <div className="w-20 h-[108px] rounded-xl bg-cellar-850 flex-shrink-0" />
+                    <div className="flex-1 space-y-2.5 py-1">
+                      <div className="h-4 w-20 rounded-full bg-cellar-850" />
+                      <div className="h-5 w-3/4 rounded-lg bg-cellar-850" />
+                      <div className="h-3.5 w-1/2 rounded-lg bg-cellar-850" />
+                      <div className="h-3.5 w-2/3 rounded-lg bg-cellar-850 mt-4" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : filteredWines.length > 0 ? (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 {filteredWines.map((wine) => (
                   <WineCard
                     key={wine.id}
@@ -384,45 +487,42 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
                     partner={partner}
                     onClick={() => setSelectedId(wine.id)}
                     onShopClick={setShopView}
+                    onQuickRate={() => setRateSession({ queue: [wine], startAtSummary: false })}
                   />
                 ))}
               </div>
             ) : (
-              <div className="py-16 text-center space-y-4 px-6">
-                <div className="w-16 h-16 rounded-3xl bg-black/70 border border-champagne-500/25 flex items-center justify-center mx-auto">
-                  <WineIcon className="w-7 h-7 text-champagne-400/60" />
+              <div className="py-16 text-center space-y-4 px-6 surface-card rounded-2xl">
+                <div className="w-14 h-14 rounded-2xl bg-cellar-950 border border-white/10 flex items-center justify-center mx-auto">
+                  <WineIcon className="w-6 h-6 text-champagne-400/50" />
                 </div>
                 <div>
-                  <h3 className="font-serif text-xl font-semibold text-stone-100">
-                    {filtersActive ? 'No wines match' : 'No wines yet'}
+                  <h3 className="font-serif text-xl font-semibold text-champagne-50">
+                    {filtersActive ? 'No bottles match' : 'Your cellar is empty'}
                   </h3>
-                  <p className="text-xs text-stone-300 mt-1 max-w-xs mx-auto leading-relaxed">
+                  <p className="text-xs text-stone-400 mt-1 max-w-xs mx-auto leading-relaxed">
                     {filtersActive
-                      ? 'Try clearing the search or filters.'
-                      : 'Log your first bottle to start your shared cellar.'}
+                      ? 'Try clearing your search or filters to see all bottles.'
+                      : 'Snap your first bottle to start building your shared wine cellar.'}
                   </p>
                 </div>
                 {filtersActive ? (
                   <button
-                    onClick={() => {
-                      setSearchQuery('');
-                      setActiveVerdict('all');
-                      setActiveType('all');
-                    }}
-                    className="px-4 py-2.5 rounded-xl bg-stone-900 text-stone-100 text-sm font-semibold border border-white/15"
+                    type="button"
+                    onClick={resetFilters}
+                    className="px-4 py-2.5 rounded-xl btn-secondary text-xs font-semibold"
                   >
                     Clear filters
                   </button>
                 ) : (
-                  activeTab === 'journal' && (
-                    <button
-                      onClick={() => openAdd()}
-                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-wine-900 via-wine-800 to-black text-champagne-100 border border-champagne-500/35 text-sm font-bold inline-flex items-center gap-2"
-                    >
-                      <Plus className="w-4 h-4 text-champagne-gold" />
-                      <span>Log first bottle</span>
-                    </button>
-                  )
+                  <button
+                    type="button"
+                    onClick={() => openAdd({ mode: 'tasted' })}
+                    className="px-5 py-2.5 rounded-xl btn-primary text-xs font-semibold inline-flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4 text-champagne-gold" />
+                    <span>Log first bottle</span>
+                  </button>
                 )}
               </div>
             )}
@@ -430,7 +530,12 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         )}
       </main>
 
-      <BottomNav activeTab={activeTab} onSelectTab={handleSelectTab} onOpenAddModal={() => openAdd()} />
+      <BottomNav
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        onOpenAddModal={() => openAdd({ mode: 'tasted' })}
+        pendingCount={myTurn.length}
+      />
 
       <WineDetailModal
         wine={selectedWine}
@@ -442,8 +547,19 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
           openAdd({ editing: w });
         }}
         onDelete={handleDeleteWine}
-        onToggleWishlist={(w) => quickUpdate(w, { wishlist: !w.wishlist })}
-        onRate={(w) => setRateQueue([w])}
+        onToggleWishlist={(w) =>
+          quickUpdate(
+            w,
+            { wishlist: !w.wishlist },
+            !w.wishlist ? 'Saved to To Try list.' : 'Removed from To Try list.'
+          )
+        }
+        onRate={(w) =>
+          setRateSession({
+            queue: [w],
+            startAtSummary: reviewStatus(w, me.slot) === 'rated',
+          })
+        }
         onAddComment={handleAddComment}
         onDeleteComment={handleDeleteComment}
         wishlistNames={wishlistWineNames}
@@ -452,6 +568,7 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
           setSelectedId(null);
           setShopView(shop);
         }}
+        onToast={notify}
       />
 
       {shopView && (
@@ -477,21 +594,22 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         settings={namedSettings}
         editingWine={editingWine}
         draft={draft}
+        initialMode={addMode}
         onSubmit={handleSubmitWine}
         customShops={customShops}
+        popularShops={popularShops}
       />
 
-      {rateQueue && (
-        <RateSheet queue={rateQueue} me={me} partner={partner} onRate={handleRate} onClose={() => setRateQueue(null)} />
+      {rateSession && (
+        <RateSheet
+          queue={rateSession.queue}
+          me={me}
+          partner={partner}
+          startAtSummary={rateSession.startAtSummary}
+          onRate={handleRate}
+          onClose={() => setRateSession(null)}
+        />
       )}
-
-      <CoupleStatsModal
-        isOpen={isStatsModalOpen}
-        onClose={() => setIsStatsModalOpen(false)}
-        wines={tastedWines}
-        settings={namedSettings}
-        onSelectWine={(w) => setSelectedId(w.id)}
-      />
 
       <SettingsModal
         isOpen={isSettingsModalOpen}
@@ -504,6 +622,8 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         onRenamed={setMe}
         onImported={setWines}
       />
+
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
     </div>
   );
 }
