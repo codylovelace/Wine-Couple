@@ -16,6 +16,9 @@ interface FilterBarProps {
   onSelectType: (type: string) => void;
   activeShop: string;
   onSelectShop: (shop: string) => void;
+  inStockOnly: boolean;
+  onToggleInStockOnly: () => void;
+  inStockCount: number;
   shops: string[];
   sortBy: SortOption;
   onSortChange: (sort: SortOption) => void;
@@ -35,6 +38,9 @@ export function FilterBar({
   onSelectType,
   activeShop,
   onSelectShop,
+  inStockOnly,
+  onToggleInStockOnly,
+  inStockCount,
   shops,
   sortBy,
   onSortChange,
@@ -128,8 +134,25 @@ export function FilterBar({
         })}
       </div>
 
-      {/* Wine Style Filter Strip */}
+      {/* Wine Style Filter Strip + At Home Filter */}
       <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        {(inStockCount > 0 || inStockOnly) && (
+          <button
+            type="button"
+            onClick={onToggleInStockOnly}
+            aria-pressed={inStockOnly}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs whitespace-nowrap font-sans transition-all border ${
+              inStockOnly
+                ? 'bg-wine-700 text-white border-wine-700 font-semibold shadow-sm'
+                : 'bg-white text-wine-700 border-wine-200 hover:border-wine-300 font-semibold'
+            }`}
+          >
+            <span>At Home</span>
+            <span className={`tabular-nums ${inStockOnly ? 'text-white/85' : 'text-wine-600'}`}>
+              {inStockCount}
+            </span>
+          </button>
+        )}
         {styleOptions.map((opt) => {
           const isSelected = activeType === opt.id;
           return (

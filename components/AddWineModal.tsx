@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Wine,
   WineType,
@@ -9,6 +9,7 @@ import {
   UserSettings,
   WineScanResult,
   PublicUser,
+  PurchaseEntry,
   isTasted,
   verdictFromSwipes,
 } from '@/lib/types';
@@ -16,6 +17,8 @@ import { reviewFor, reviewStatus, SharedWineFields } from '@/lib/wine-logic';
 import { WineSubmission, api, isAbort, retryWhileBusy } from '@/lib/api-client';
 import { WINE_TYPE_META, WINE_TYPES_LIST, VERDICT_ORDER } from '@/lib/wine-meta';
 import { canonicalShop } from '@/lib/shops';
+import { findDuplicateWine } from '@/lib/wine-match';
+import { wineTitle } from '@/lib/format';
 import { StillTrying } from '@/components/StillTrying';
 import { SwipeVerdict, SwipeChoice } from '@/components/SwipeVerdict';
 import {
@@ -32,6 +35,10 @@ import {
   Heart,
   Wine as WineIcon,
   Bookmark,
+  Tag,
+  Minus,
+  Plus,
+  CopyCheck,
 } from 'lucide-react';
 import { POPULAR_AROMAS } from '@/lib/wine-search-links';
 import { ShopPicker } from '@/components/ShopPicker';
@@ -43,14 +50,17 @@ interface AddWineModalProps {
   me: PublicUser;
   partner: PublicUser | null;
   settings: UserSettings;
+  wines: Wine[];
   // An existing wine: edit it, or log a tasting of an untasted wishlist pick.
   editingWine?: Wine | null;
-  // Details to start a brand-new wine from (e.g. a recommendation).
+  // Details to start a brand-new wine from (e.g. a recommendation or shelf check).
   draft?: Partial<Wine> | null;
   // Start in tasting mode or wishlist ("Save to try") mode.
   initialMode?: 'tasted' | 'wishlist';
   // Resolves when saved; throws with a message to show if it wasn't.
   onSubmit: (submission: WineSubmission, existingId?: string) => Promise<void>;
+  onOpenExisting?: (wine: Wine) => void;
+  onLogBoughtAgain?: (existing: Wine, entry: PurchaseEntry, addStock: number) => Promise<void>;
   // Shops you've used before that aren't in the dropdown's main list.
   customShops: string[];
   // Most frequently used shops for 1-tap quick chips.
@@ -68,17 +78,22 @@ export function AddWineModal({
   me,
   partner,
   settings,
+  wines,
   editingWine,
   draft,
   initialMode = 'tasted',
   onSubmit,
+  onOpenExisting,
+  onLogBoughtAgain,
   customShops,
   popularShops = [],
 }: AddWineModalProps) {
   // photo -> your swipe -> details (wishlist skips swipe)
   const [step, setStep] = useState<'photo' | 'verdict' | 'details'>('photo');
   const [mode, setMode] = useState<'tasted' | 'wishlist'>(initialMode);
+  const [includeBackStep1, setIncludeBackStep1] = useState(false);
   const [showMoreDetails, setShowMoreDetails] = useState(true);
+  const [duplicateDismissed, setDuplicateDismissed] = useState(false);
 
   const [isScanning, setIsScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
@@ -89,10 +104,9 @@ export function AddWineModal({
   // prepared as well as while Gemini is busy.
   const scanAbort = useRef<AbortController | null>(null);
 
-  // Stop retrying a scan when the form closes, or when you skip ahead to
-  // type the details yourself.
+  // Stop retrying a scan when the form closes or moves to verdict.
   useEffect(() => {
-    if (!isOpen || step !== 'photo') scanAbort.current?.abort();
+    if (!isOpen || step === 'verdict') scanAbort.current?.abort();
   }, [isOpen, step]);
   useEffect(() => () => scanAbort.current?.abort(), []);
 
@@ -109,10 +123,13 @@ export function AddWineModal({
   const [country, setCountry] = useState('');
   const [abv, setAbv] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [backImageUrl, setBackImageUrl] = useState('');
   const [store, setStore] = useState('');
   const [price, setPrice] = useState('');
   const [currency, setCurrency] = useState(settings.defaultCurrency || '£');
   const [boughtOn, setBoughtOn] = useState(today());
+  const [isSpecialOffer, setIsSpecialOffer] = useState(false);
+  const [stock, setStock] = useState(0);
   const [jointNotes, setJointNotes] = useState('');
   const [selectedAromas, setSelectedAromas] = useState<string[]>([]);
   const [foodPairings, setFoodPairings] = useState<string[]>([]);
@@ -131,6 +148,8 @@ export function AddWineModal({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const backCameraRef = useRef<HTMLInputElement>(null);
+  const backFileRef = useRef<HTMLInputElement>(null);
 
   const editing = Boolean(editingWine && isTasted(editingWine));
   const loggingWishlistPick = Boolean(editingWine && !isTasted(editingWine));
@@ -147,10 +166,13 @@ export function AddWineModal({
     setCountry(source.country ?? '');
     setAbv(source.abv ?? '');
     setImageUrl(source.imageUrl ?? '');
+    setBackImageUrl(source.backImageUrl ?? '');
     setStore(source.purchase?.store ?? '');
     setPrice(source.purchase?.price ? String(source.purchase.price) : '');
     setCurrency(source.purchase?.currency || settings.defaultCurrency || '£');
     setBoughtOn(source.purchase?.date || today());
+    setIsSpecialOffer(Boolean(source.purchase?.isSpecialOffer));
+    setStock(typeof source.stock === 'number' ? source.stock : 0);
     setJointNotes(source.jointNotes ?? '');
     setSelectedAromas(source.aromaTags ?? []);
     setFoodPairings(source.foodPairings ?? []);
@@ -164,6 +186,8 @@ export function AddWineModal({
     setMyRating(mine?.rating ?? 0);
     setMyNotes(mine?.notes ?? '');
 
+    setIncludeBackStep1(false);
+    setDuplicateDismissed(false);
     setScanned(false);
     setScanMessage(null);
     setSaveError(null);
@@ -178,6 +202,12 @@ export function AddWineModal({
     setStep(editing ? 'details' : editingWine || draft ? 'verdict' : 'photo');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingWine, draft, isOpen, initialMode]);
+
+  const duplicateMatch = useMemo(() => {
+    if (!isOpen || editingWine || duplicateDismissed) return null;
+    if (name.trim().length < 3) return null;
+    return findDuplicateWine({ name, producer, grape }, wines);
+  }, [isOpen, editingWine, duplicateDismissed, name, producer, grape, wines]);
 
   if (!isOpen) return null;
 
@@ -206,28 +236,41 @@ export function AddWineModal({
     if (r.tastingNotesSummary) setJointNotes((prev) => prev || `Label: ${r.tastingNotesSummary}`);
   };
 
-  const handleImageFile = async (file: File) => {
-    const ctrl = startScan();
+  const handleFrontFile = async (file: File) => {
+    const ctrl = includeBackStep1 ? null : startScan();
 
     let dataUrl: string;
     try {
-      // The resized JPEG data URL is used for the preview and the scan, and is
-      // sent with the wine on save; the server writes it to the photos volume.
       dataUrl = (await prepareBottlePhoto(file)).dataUrl;
     } catch (err) {
       console.error('Could not read photo:', err);
-      finishScan(ctrl, "Couldn't read that photo. Try another one, or enter the details by hand.");
+      if (ctrl) finishScan(ctrl, "Couldn't read that photo. Try another one, or enter the details by hand.");
+      else setScanMessage("Couldn't read that photo. Try another one.");
       return;
     }
-    if (ctrl.signal.aborted) return finishScan(ctrl, 'Scan cancelled.');
+    if (ctrl?.signal.aborted) return finishScan(ctrl, 'Scan cancelled.');
     setImageUrl(dataUrl);
 
+    if (includeBackStep1) {
+      // Wait for user to optionally add back photo and tap "Scan labels"
+      return;
+    }
+
     if (!settings.hasGeminiKey) {
-      finishScan(ctrl, null);
+      if (ctrl) finishScan(ctrl, null);
       setStep(mode === 'wishlist' ? 'details' : 'verdict');
       return;
     }
-    await scanLabel(dataUrl, ctrl);
+    await scanLabel(dataUrl, backImageUrl, ctrl!);
+  };
+
+  const handleBackFile = async (file: File) => {
+    try {
+      const { dataUrl } = await prepareBottlePhoto(file);
+      setBackImageUrl(dataUrl);
+    } catch {
+      setScanMessage("Couldn't read that back label photo. Try another one.");
+    }
   };
 
   const startScan = () => {
@@ -242,33 +285,30 @@ export function AddWineModal({
   };
 
   const finishScan = (ctrl: AbortController, message: string | null) => {
-    // A newer scan has taken over; leave its state alone.
     if (scanAbort.current !== ctrl) return;
     scanAbort.current = null;
     setScanMessage(message);
     setIsScanning(false);
   };
 
-  // Reads the label, retrying for as long as Gemini is busy. Only moves on
-  // once the label is read; on a real failure or Cancel it stays on the photo.
-  const scanLabel = async (dataUrl: string, ctrl = startScan()) => {
+  const scanLabel = async (frontUrl: string, backUrl?: string, ctrl = startScan(), stayOnDetails = false) => {
     try {
+      const payload: { imageBase64: string; backImageBase64?: string } = { imageBase64: frontUrl };
+      if (backUrl && backUrl.startsWith('data:image/')) {
+        payload.backImageBase64 = backUrl;
+      }
       const { scanResult } = await retryWhileBusy(
-        (signal) =>
-          api<{ scanResult: WineScanResult }>('/api/scan-wine', {
-            method: 'POST',
-            body: { imageBase64: dataUrl },
-            signal,
-          }),
+        (signal) => api<{ scanResult: WineScanResult }>('/api/scan-wine', { method: 'POST', body: payload, signal }),
         { signal: ctrl.signal, onRetry: (attempt) => scanAbort.current === ctrl && setScanAttempt(attempt) }
       );
       if (scanAbort.current !== ctrl) return;
       applyScanResult(scanResult);
       setScanned(true);
-      // Auto-collapse extra fields only after a fresh scan so the form stays super crisp.
       if (!editing) setShowMoreDetails(false);
       finishScan(ctrl, null);
-      setStep(mode === 'wishlist' ? 'details' : 'verdict');
+      if (!stayOnDetails) {
+        setStep(mode === 'wishlist' ? 'details' : 'verdict');
+      }
     } catch (err) {
       finishScan(
         ctrl,
@@ -297,6 +337,8 @@ export function AddWineModal({
     country: country.trim(),
     abv: abv.trim(),
     imageUrl,
+    backImageUrl,
+    stock,
     jointNotes: jointNotes.trim(),
     aromaTags: selectedAromas,
     foodPairings,
@@ -305,7 +347,7 @@ export function AddWineModal({
       price: parseFloat(price) || 0,
       currency,
       date: boughtOn || undefined,
-      isSpecialOffer: editingWine?.purchase?.isSpecialOffer ?? false,
+      isSpecialOffer,
       notes: editingWine?.purchase?.notes ?? '',
     },
     ...(scanProfile ?? {}),
@@ -323,7 +365,10 @@ export function AddWineModal({
       // partner edited on their phone in the meantime.
       changes = {};
       for (const [key, value] of Object.entries(fields) as [keyof SharedWineFields, unknown][]) {
-        if (JSON.stringify(value) !== JSON.stringify(editingWine[key] ?? (key === 'imageUrl' ? '' : undefined))) {
+        const prev =
+          editingWine[key] ??
+          (key === 'imageUrl' || key === 'backImageUrl' ? '' : key === 'stock' ? 0 : undefined);
+        if (JSON.stringify(value) !== JSON.stringify(prev)) {
           (changes as Record<string, unknown>)[key] = value;
         }
       }
@@ -334,7 +379,6 @@ export function AddWineModal({
     }
 
     if (editingWine && !editing) {
-      // Logging a tasting of a wishlist pick moves it into the journal.
       changes.tasted = true;
       changes.wishlist = false;
     }
@@ -348,8 +392,6 @@ export function AddWineModal({
     let myReview: { liked?: boolean; rating: number; notes: string } | null | undefined = undefined;
     if (mode === 'tasted') {
       myReview = myTasted ? { liked: myLiked, rating: myRating, notes: myNotes.trim() } : null;
-      // Nothing filled in ("Skip, rate later") isn't a rating: it stays on your
-      // to-rate list instead.
       const emptyReview = myReview !== null && myReview.liked === undefined && !myReview.rating && !myReview.notes;
       if (emptyReview) {
         reviewChanged = false;
@@ -374,6 +416,27 @@ export function AddWineModal({
       onClose();
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Save failed. Try again.');
+      setSaving(false);
+    }
+  };
+
+  const handleBoughtAgainFromDuplicate = async () => {
+    if (!duplicateMatch || !onLogBoughtAgain) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const entry: PurchaseEntry = {
+        id: `p-${Date.now()}`,
+        store: canonicalShop(store) || duplicateMatch.purchase?.store || '',
+        price: parseFloat(price) || duplicateMatch.purchase?.price || 0,
+        currency,
+        date: boughtOn || today(),
+        isSpecialOffer,
+      };
+      await onLogBoughtAgain(duplicateMatch, entry, Math.max(0, stock));
+      onClose();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Could not update existing bottle.');
       setSaving(false);
     }
   };
@@ -461,7 +524,6 @@ export function AddWineModal({
           {/* STEP 1: PHOTO */}
           {step === 'photo' && (
             <div className="space-y-4">
-              {/* Mode Switcher: Tasted vs Wishlist */}
               {canToggleMode && (
                 <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-linen-100 border border-linen-200" role="tablist">
                   <button
@@ -504,6 +566,28 @@ export function AddWineModal({
                 </p>
               </div>
 
+              {/* Optional Back Label Toggle */}
+              {!isScanning && (
+                <div className="flex items-center justify-between px-3.5 py-2.5 rounded-2xl surface-card">
+                  <span className="text-xs font-medium text-ink-700">Include back label photo too</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={includeBackStep1}
+                    onClick={() => setIncludeBackStep1((v) => !v)}
+                    className={`w-10 h-6 rounded-full p-0.5 transition-colors ${
+                      includeBackStep1 ? 'bg-wine-700' : 'bg-linen-200'
+                    }`}
+                  >
+                    <span
+                      className={`block w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                        includeBackStep1 ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
+
               {scanMessage && !isScanning && !imageUrl.startsWith('data:') && (
                 <div className="p-3 rounded-2xl surface-card text-xs text-ink-700">
                   {scanMessage}
@@ -520,7 +604,7 @@ export function AddWineModal({
                     <span className="font-serif text-lg font-semibold text-ink-900 z-10">Reading the label…</span>
                   </div>
                   <StillTrying
-                    label="Reading the label"
+                    label={backImageUrl ? 'Reading front & back labels' : 'Reading the label'}
                     attempt={scanAttempt}
                     onCancel={() => scanAbort.current?.abort()}
                   />
@@ -536,7 +620,7 @@ export function AddWineModal({
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => scanLabel(imageUrl)}
+                      onClick={() => scanLabel(imageUrl, backImageUrl)}
                       className="py-3 rounded-xl btn-primary text-sm font-semibold flex items-center justify-center gap-1.5"
                     >
                       <RefreshCw className="w-4 h-4" />
@@ -551,6 +635,53 @@ export function AddWineModal({
                       New photo
                     </button>
                   </div>
+                </div>
+              ) : includeBackStep1 ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="h-36 rounded-2xl surface-card hover:border-wine-300 overflow-hidden flex flex-col items-center justify-center gap-2"
+                    >
+                      {imageUrl ? (
+                        <img src={imageUrl} alt="Front label" className="w-full h-full object-cover" />
+                      ) : (
+                        <>
+                          <Camera className="w-5 h-5 text-wine-700" />
+                          <span className="text-xs font-semibold text-ink-900">Front label *</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => backCameraRef.current?.click()}
+                      className="h-36 rounded-2xl surface-card hover:border-wine-300 overflow-hidden flex flex-col items-center justify-center gap-2"
+                    >
+                      {backImageUrl ? (
+                        <img src={backImageUrl} alt="Back label" className="w-full h-full object-cover" />
+                      ) : (
+                        <>
+                          <Camera className="w-5 h-5 text-ink-500" />
+                          <span className="text-xs font-semibold text-ink-700">Back label</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!imageUrl}
+                    onClick={() => {
+                      if (!settings.hasGeminiKey) {
+                        setStep(mode === 'wishlist' ? 'details' : 'verdict');
+                      } else {
+                        scanLabel(imageUrl, backImageUrl);
+                      }
+                    }}
+                    className="w-full py-3 rounded-xl btn-primary text-sm font-semibold disabled:opacity-50"
+                  >
+                    {settings.hasGeminiKey ? 'Scan both labels' : 'Continue with photos'}
+                  </button>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
@@ -579,7 +710,7 @@ export function AddWineModal({
 
               {[cameraInputRef, fileInputRef].map((ref, i) => (
                 <input
-                  key={i}
+                  key={`front-${i}`}
                   ref={ref}
                   type="file"
                   accept="image/*"
@@ -587,9 +718,24 @@ export function AddWineModal({
                   className="hidden"
                   onChange={(e) => {
                     const picked = e.target.files?.[0];
-                    // Reset so choosing the same photo again still fires onChange.
                     e.target.value = '';
-                    if (picked) handleImageFile(picked);
+                    if (picked) handleFrontFile(picked);
+                  }}
+                />
+              ))}
+
+              {[backCameraRef, backFileRef].map((ref, i) => (
+                <input
+                  key={`back-${i}`}
+                  ref={ref}
+                  type="file"
+                  accept="image/*"
+                  capture={i === 0 ? 'environment' : undefined}
+                  className="hidden"
+                  onChange={(e) => {
+                    const picked = e.target.files?.[0];
+                    e.target.value = '';
+                    if (picked) handleBackFile(picked);
                   }}
                 />
               ))}
@@ -624,6 +770,59 @@ export function AddWineModal({
           {/* STEP 3: DETAILS */}
           {step === 'details' && (
             <div className="space-y-4 animate-fadeIn">
+              {/* DUPLICATE DETECTION BANNER */}
+              {duplicateMatch && (
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-300 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2 min-w-0">
+                      <CopyCheck className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-amber-950">
+                          Already in your cellar: {wineTitle(duplicateMatch).title}
+                        </p>
+                        <p className="text-[11px] text-amber-800">
+                          {isTasted(duplicateMatch)
+                            ? `Rated ${VERDICTS[duplicateMatch.coupleVerdict]?.label ?? duplicateMatch.coupleVerdict}`
+                            : 'Currently on your To Try list'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDuplicateDismissed(true)}
+                      aria-label="Dismiss duplicate notice"
+                      className="text-amber-700 hover:text-amber-950 p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {onLogBoughtAgain && (
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={handleBoughtAgainFromDuplicate}
+                        className="flex-1 py-2 px-3 rounded-xl bg-amber-900 hover:bg-amber-950 text-white text-xs font-semibold"
+                      >
+                        Log as Bought Again
+                      </button>
+                    )}
+                    {onOpenExisting && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          onOpenExisting(duplicateMatch);
+                        }}
+                        className="py-2 px-3 rounded-xl bg-white border border-amber-300 text-amber-950 text-xs font-semibold"
+                      >
+                        Open existing
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {scanMessage && (
                 <div className="p-3 rounded-2xl surface-card flex items-start justify-between gap-3 text-xs text-ink-700">
                   <span>{scanMessage}</span>
@@ -652,26 +851,47 @@ export function AddWineModal({
                 </div>
               )}
 
-              {/* BOTTLE ESSENTIALS */}
+              {/* BOTTLE ESSENTIALS (Front + Back Photos, Name, Style) */}
               <div className="p-4 rounded-2xl surface-card space-y-3.5">
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-2.5">
                   <button
                     type="button"
                     onClick={() => setStep('photo')}
-                    aria-label={imageUrl ? 'Change bottle photo' : 'Add bottle photo'}
+                    aria-label={imageUrl ? 'Change front bottle photo' : 'Add front bottle photo'}
                     className="w-14 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-linen-100 border border-linen-200 hover:border-wine-400 flex flex-col items-center justify-center text-ink-500 transition-colors relative group"
                   >
                     {imageUrl ? (
                       <>
-                        <img src={imageUrl} alt={name || 'Bottle'} className="w-full h-full object-cover" />
-                        <span className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                          <Camera className="w-4 h-4 text-white" />
+                        <img src={imageUrl} alt={name || 'Front bottle'} className="w-full h-full object-cover" />
+                        <span className="absolute bottom-0.5 inset-x-0.5 text-center rounded bg-black/65 text-[9px] text-white font-semibold">
+                          Front
                         </span>
                       </>
                     ) : (
                       <>
                         <Camera className="w-4 h-4 text-wine-700/70" />
-                        <span className="text-[10px] mt-1 font-medium">Photo</span>
+                        <span className="text-[10px] mt-1 font-medium">Front</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => backCameraRef.current?.click()}
+                    aria-label={backImageUrl ? 'Change back label photo' : 'Add back label photo'}
+                    className="w-14 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-linen-100 border border-linen-200 hover:border-wine-400 flex flex-col items-center justify-center text-ink-500 transition-colors relative group"
+                  >
+                    {backImageUrl ? (
+                      <>
+                        <img src={backImageUrl} alt="Back label" className="w-full h-full object-cover" />
+                        <span className="absolute bottom-0.5 inset-x-0.5 text-center rounded bg-black/65 text-[9px] text-white font-semibold">
+                          Back
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="w-4 h-4 text-ink-400" />
+                        <span className="text-[10px] mt-1 font-medium">Back</span>
                       </>
                     )}
                   </button>
@@ -687,6 +907,19 @@ export function AddWineModal({
                     />
                   </label>
                 </div>
+
+                {/* Offer to scan both if back label was just uploaded in Step 3 */}
+                {backImageUrl.startsWith('data:image/') && imageUrl && settings.hasGeminiKey && (
+                  <button
+                    type="button"
+                    disabled={isScanning}
+                    onClick={() => scanLabel(imageUrl, backImageUrl, startScan(), true)}
+                    className="w-full py-2 rounded-xl btn-secondary text-xs font-semibold flex items-center justify-center gap-1.5"
+                  >
+                    <Sparkles className={`w-3.5 h-3.5 text-wine-700 ${isScanning ? 'animate-spin' : ''}`} />
+                    <span>{isScanning ? 'Reading labels…' : 'Rescan with back label'}</span>
+                  </button>
+                )}
 
                 {/* Tactile Wine Style Pills */}
                 <div className="space-y-1.5">
@@ -801,14 +1034,13 @@ export function AddWineModal({
                 </div>
               )}
 
-              {/* WHERE BOUGHT & PRICE */}
+              {/* WHERE BOUGHT, PRICE, OFFER & RACK STOCK */}
               <div className="p-4 rounded-2xl surface-card space-y-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-wine-700 flex items-center gap-1.5">
                   <Store className="w-3.5 h-3.5 text-wine-700" />
                   <span>Where {mode === 'wishlist' ? 'spotted' : 'you bought it'}</span>
                 </h3>
 
-                {/* Quick-tap Popular Shop Chips */}
                 {popularShops.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {popularShops.map((shop) => {
@@ -880,6 +1112,49 @@ export function AddWineModal({
                     />
                   </label>
                 </div>
+
+                {/* Offer Toggle & Rack Stock Stepper */}
+                <div className="pt-2 border-t border-linen-100 flex flex-wrap items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsSpecialOffer((o) => !o)}
+                    aria-pressed={isSpecialOffer}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+                      isSpecialOffer
+                        ? 'bg-amber-50 border-amber-300 text-amber-800'
+                        : 'bg-linen-50 border-linen-200 text-ink-700 hover:border-linen-300'
+                    }`}
+                  >
+                    <Tag className="w-3.5 h-3.5" />
+                    <span>On special offer</span>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-ink-500 font-medium">At home</span>
+                    <div className="inline-flex items-center rounded-xl bg-linen-50 border border-linen-200">
+                      <button
+                        type="button"
+                        onClick={() => setStock((s) => Math.max(0, s - 1))}
+                        disabled={stock <= 0}
+                        aria-label="Decrease bottles at home"
+                        className="p-1.5 text-ink-700 disabled:opacity-35"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="px-2 text-xs font-semibold text-ink-900 tabular-nums min-w-[24px] text-center">
+                        {stock}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setStock((s) => Math.min(99, s + 1))}
+                        aria-label="Increase bottles at home"
+                        className="p-1.5 text-ink-700"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* COLLAPSIBLE MORE DETAILS, NOTES & VERDICT OVERRIDE */}
@@ -909,7 +1184,6 @@ export function AddWineModal({
 
                 {showMoreDetails && (
                   <div className="px-4 pb-4 pt-3 border-t border-linen-100 space-y-4">
-                    {/* Bottle metadata */}
                     <div className="grid grid-cols-2 gap-2.5">
                       <label className="col-span-2">
                         <span className={labelClass}>Producer / Winery</span>
@@ -975,7 +1249,6 @@ export function AddWineModal({
                       </label>
                     </div>
 
-                    {/* Shared Notes */}
                     <label className="block">
                       <span className={labelClass}>Shared notes</span>
                       <textarea
@@ -987,7 +1260,6 @@ export function AddWineModal({
                       />
                     </label>
 
-                    {/* Couple Verdict Override (tasted mode only) */}
                     {mode === 'tasted' && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2">
@@ -1034,7 +1306,6 @@ export function AddWineModal({
                       </div>
                     )}
 
-                    {/* Aromas */}
                     <div className="space-y-1.5">
                       <span className={labelClass}>Aromas &amp; flavours</span>
                       <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-linen-50 rounded-xl border border-linen-200">
@@ -1065,6 +1336,24 @@ export function AddWineModal({
             </div>
           )}
         </div>
+
+        {/* Keep back-label file inputs mounted on step 3 as well */}
+        {step !== 'photo' && (
+          <>
+            <input
+              ref={backCameraRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                const picked = e.target.files?.[0];
+                e.target.value = '';
+                if (picked) handleBackFile(picked);
+              }}
+            />
+          </>
+        )}
 
         {/* Footer */}
         <div className="p-4 modal-footer-safe border-t border-linen-200 bg-white space-y-2">

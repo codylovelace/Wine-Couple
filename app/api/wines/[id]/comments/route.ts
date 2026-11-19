@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { updateWine, WineNotFoundError } from '@/lib/db';
-import { withUser } from '@/lib/auth';
+import { getUsers, withUser } from '@/lib/auth';
+import { notifyPartnerWebhook } from '@/lib/webhook';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +27,19 @@ export const POST = withUser(async (request: NextRequest, user, { params }: { pa
         },
       ];
     });
+
+    const partner = (await getUsers()).find((u) => u.id !== user.id);
+    const snippet = clean.length > 100 ? `${clean.slice(0, 97)}…` : clean;
+    void notifyPartnerWebhook({
+      event: 'wine.commented',
+      title: `Comment on ${wine.name}`,
+      message: `${user.name} commented on ${wine.name}: "${snippet}"`,
+      actor: user.name,
+      targetPartner: partner?.name,
+      wineId: wine.id,
+      wineName: wine.name,
+    });
+
     return NextResponse.json({ success: true, wine }, { status: 201 });
   } catch (error) {
     if (error instanceof WineNotFoundError) {

@@ -66,19 +66,26 @@ export function WineCard({ wine, me, partner, onClick, onShopClick, onQuickRate 
         {/* Content */}
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div>
-            {/* Top row: Verdict Badge & Star Rating */}
+            {/* Top row: Verdict Badge, Stock Pill & Star Rating */}
             <div className="flex items-center justify-between gap-2 mb-1">
-              {tasted ? (
-                <span
-                  className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-sans font-semibold tracking-wide border ${verdictConfig.bgClass} ${verdictConfig.colorClass} ${verdictConfig.borderClass}`}
-                >
-                  {verdictConfig.shortLabel}
-                </span>
-              ) : (
-                <span className="inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-sans font-semibold tracking-wide border bg-champagne-100 text-champagne-700 border-champagne-300">
-                  To Try
-                </span>
-              )}
+              <div className="flex items-center gap-1.5 min-w-0">
+                {tasted ? (
+                  <span
+                    className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-sans font-semibold tracking-wide border ${verdictConfig.bgClass} ${verdictConfig.colorClass} ${verdictConfig.borderClass}`}
+                  >
+                    {verdictConfig.shortLabel}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-sans font-semibold tracking-wide border bg-champagne-100 text-champagne-700 border-champagne-300">
+                    To Try
+                  </span>
+                )}
+                {(wine.stock ?? 0) > 0 && (
+                  <span className="inline-flex items-center whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-sans font-semibold bg-wine-50 text-wine-700 border border-wine-200 tabular-nums">
+                    {wine.stock} at home
+                  </span>
+                )}
+              </div>
 
               {wine.averageRating > 0 && (
                 <div className="flex items-center gap-1 text-ink-900 text-xs font-sans font-semibold tabular-nums flex-shrink-0">
@@ -137,6 +144,11 @@ export function WineCard({ wine, me, partner, onClick, onShopClick, onQuickRate 
                   {Number(wine.purchase.price).toFixed(2)}
                 </span>
               ) : null}
+              {wine.purchase?.isSpecialOffer && (
+                <span className="px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-semibold">
+                  Offer
+                </span>
+              )}
             </div>
 
             {/* Comments, Partner Swipes & Pending Action */}

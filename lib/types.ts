@@ -100,6 +100,16 @@ export interface PurchaseDetails {
   notes?: string;
 }
 
+export interface PurchaseEntry {
+  id: string;
+  store: string;
+  price: number;
+  currency: string;
+  date: string;
+  isSpecialOffer?: boolean;
+  notes?: string;
+}
+
 export interface OnlineBuyLinks {
   wineSearcher?: string;
   vivino?: string;
@@ -120,6 +130,7 @@ export interface Wine {
   country: string; // e.g. "France", "USA", "Argentina", "New Zealand", "Italy", "Spain"
   abv?: string; // e.g. "13.5%"
   imageUrl?: string;
+  backImageUrl?: string;
   
   // Overall Couple Status
   coupleVerdict: Verdict;
@@ -141,6 +152,8 @@ export interface Wine {
 
   // Purchase & Where to buy
   purchase: PurchaseDetails;
+  purchaseHistory?: PurchaseEntry[];
+  stock?: number;
   onlineLinks: OnlineBuyLinks;
   
   // false for a wishlist pick you haven't tried yet; it has no verdict or
@@ -172,11 +185,14 @@ export interface UserSettings {
   partner1Avatar: string;
   partner2Avatar: string;
   defaultCurrency: string;
-  // Only ever present server-side; the API strips it before responding.
+  // Only ever present server-side; the API strips them before responding.
   geminiApiKey?: string;
-  // Set by the API for the browser instead of the key itself.
+  webhookUrl?: string;
+  // Set by the API for the browser instead of the key/URL itself.
   hasGeminiKey?: boolean;
   geminiKeyFromEnv?: boolean;
+  hasWebhook?: boolean;
+  webhookHost?: string;
 }
 
 export interface WineScanResult {

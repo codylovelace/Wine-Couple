@@ -172,6 +172,7 @@ export async function storeImage(imageUrl: string | undefined): Promise<string |
 
 export async function createWine(wine: Wine): Promise<Wine> {
   wine.imageUrl = await storeImage(wine.imageUrl);
+  wine.backImageUrl = await storeImage(wine.backImageUrl);
   withBuyLinks(wine);
   const now = new Date().toISOString();
   const saved = { ...wine, createdAt: now, updatedAt: now };
@@ -198,6 +199,7 @@ export async function updateWine(
   mutate: (wine: Wine) => void
 ): Promise<Wine> {
   let replacedImage: string | undefined;
+  let replacedBackImage: string | undefined;
   let saved: Wine | undefined;
   await withWriteLock(async () => {
     const wines = await readWinesFile();
@@ -205,8 +207,10 @@ export async function updateWine(
     if (index < 0) throw new WineNotFoundError();
     const wine: Wine = structuredClone(wines[index]);
     const previousImage = wine.imageUrl;
+    const previousBackImage = wine.backImageUrl;
     mutate(wine);
     if (previousImage && previousImage !== wine.imageUrl) replacedImage = previousImage;
+    if (previousBackImage && previousBackImage !== wine.backImageUrl) replacedBackImage = previousBackImage;
     if (wine.name !== wines[index].name || wine.producer !== wines[index].producer) {
       // Search links are built from the name, so rebuild them after a rename.
       wine.onlineLinks = {};
@@ -219,6 +223,7 @@ export async function updateWine(
     await writeJsonAtomic(WINES_FILE, wines);
   });
   if (replacedImage) await deleteUploadedImage(replacedImage);
+  if (replacedBackImage) await deleteUploadedImage(replacedBackImage);
   return saved!;
 }
 
@@ -243,10 +248,11 @@ export async function deleteWine(id: string): Promise<boolean> {
   });
   if (!removed) return false;
   if (removed.imageUrl) await deleteUploadedImage(removed.imageUrl);
+  if (removed.backImageUrl) await deleteUploadedImage(removed.backImageUrl);
   return true;
 }
 
-// Server-side only: includes the stored Gemini key. Never send this to the browser.
+// Server-side only: includes the stored Gemini key & webhook URL. Never send those to the browser.
 export async function getSettings(): Promise<UserSettings> {
   try {
     return { ...DEFAULT_SETTINGS, ...(await readJson<Partial<UserSettings>>(SETTINGS_FILE, {})) };
@@ -256,10 +262,10 @@ export async function getSettings(): Promise<UserSettings> {
   }
 }
 
-// What the browser is allowed to see: the key itself is replaced by flags,
+// What the browser is allowed to see: secrets are replaced by flags,
 // and once accounts exist the partner names are the account names.
 export function toPublicSettings(settings: UserSettings, users: Pick<StoredUser, 'name' | 'slot'>[] = []): UserSettings {
-  const { geminiApiKey, ...rest } = settings;
+  const { geminiApiKey, webhookUrl, ...rest } = settings;
   const named = { ...rest };
   for (const user of users) {
     if (user.slot === 1) {
@@ -270,19 +276,35 @@ export function toPublicSettings(settings: UserSettings, users: Pick<StoredUser,
       named.partner2Avatar = user.name.charAt(0).toUpperCase();
     }
   }
+  let webhookHost = '';
+  if (webhookUrl) {
+    try {
+      webhookHost = new URL(webhookUrl).host;
+    } catch {
+      webhookHost = '';
+    }
+  }
   return {
     ...named,
     hasGeminiKey: Boolean(geminiApiKey || process.env.GEMINI_API_KEY),
     geminiKeyFromEnv: !geminiApiKey && Boolean(process.env.GEMINI_API_KEY),
+    hasWebhook: Boolean(webhookUrl),
+    webhookHost: webhookHost || undefined,
   };
 }
 
 const CURRENCIES = ['£', '$', '€', 'A$'];
 
+export class SettingsValidationError extends Error {}
+
 // Only the shared preferences can change here; partner names come from the
-// accounts. geminiApiKey: undefined keeps the stored key, '' removes it, any
-// other string replaces it.
-export async function updateSettings(updates: { defaultCurrency?: unknown; geminiApiKey?: unknown }): Promise<UserSettings> {
+// accounts. geminiApiKey / webhookUrl: undefined keeps the stored value, ''
+// removes it, any other string replaces it.
+export async function updateSettings(updates: {
+  defaultCurrency?: unknown;
+  geminiApiKey?: unknown;
+  webhookUrl?: unknown;
+}): Promise<UserSettings> {
   return withWriteLock(async () => {
     const updated = await getSettings();
     if (typeof updates.defaultCurrency === 'string' && CURRENCIES.includes(updates.defaultCurrency)) {
@@ -292,8 +314,27 @@ export async function updateSettings(updates: { defaultCurrency?: unknown; gemin
       if (updates.geminiApiKey.trim()) updated.geminiApiKey = updates.geminiApiKey.trim();
       else delete updated.geminiApiKey;
     }
+    if (typeof updates.webhookUrl === 'string') {
+      const trimmed = updates.webhookUrl.trim();
+      if (!trimmed) {
+        delete updated.webhookUrl;
+      } else {
+        let parsed: URL;
+        try {
+          parsed = new URL(trimmed);
+        } catch {
+          throw new SettingsValidationError('Webhook URL must be a valid http:// or https:// URL.');
+        }
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          throw new SettingsValidationError('Webhook URL must start with http:// or https://.');
+        }
+        updated.webhookUrl = parsed.toString();
+      }
+    }
     delete updated.hasGeminiKey;
     delete updated.geminiKeyFromEnv;
+    delete updated.hasWebhook;
+    delete updated.webhookHost;
     await writeJsonAtomic(SETTINGS_FILE, updated, 0o600);
     return updated;
   });

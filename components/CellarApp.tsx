@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Wine, UserSettings, PublicUser, isTasted } from '@/lib/types';
+import { Wine, UserSettings, PublicUser, PurchaseEntry, isTasted } from '@/lib/types';
 import { WineRecommendation } from '@/lib/recommendations';
 import { api, createWineApi, updateWineApi, WineSubmission } from '@/lib/api-client';
 import { awaitingRating, reviewStatus, ReviewInput } from '@/lib/wine-logic';
@@ -12,6 +12,8 @@ import { FilterBar, SortOption } from '@/components/FilterBar';
 import { WineCard } from '@/components/WineCard';
 import { WineDetailModal } from '@/components/WineDetailModal';
 import { AddWineModal } from '@/components/AddWineModal';
+import { ShelfCheckModal } from '@/components/ShelfCheckModal';
+import { ActivityStrip } from '@/components/ActivityStrip';
 import { InsightsView } from '@/components/InsightsView';
 import { SettingsModal } from '@/components/SettingsModal';
 import { RecommendedSection } from '@/components/RecommendedSection';
@@ -52,6 +54,7 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
   const [activeVerdict, setActiveVerdict] = useState('all');
   const [activeType, setActiveType] = useState('all');
   const [activeShop, setActiveShop] = useState('all');
+  const [inStockOnly, setInStockOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
 
   // Sheets & Modals
@@ -61,6 +64,7 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
   const [draft, setDraft] = useState<Partial<Wine> | null>(null);
   const [addMode, setAddMode] = useState<'tasted' | 'wishlist'>('tasted');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isShelfCheckOpen, setIsShelfCheckOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [rateSession, setRateSession] = useState<{ queue: Wine[]; startAtSummary?: boolean } | null>(null);
 
@@ -68,12 +72,7 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
     setToast({ message, tone });
   }, []);
 
-  // Always show the latest copy of the open wine, e.g. after a refresh
-  // brings in your partner's comment.
   const selectedWine = useMemo(() => wines.find((w) => w.id === selectedId) ?? null, [wines, selectedId]);
-
-  // Untasted wishlist picks have no verdict or rating, so they stay out of the
-  // journal, counts, stats and the recommendation engine.
   const tastedWines = useMemo(() => wines.filter(isTasted), [wines]);
   const myTurn = useMemo(() => wines.filter((w) => awaitingRating(w, me.slot)), [wines, me.slot]);
 
@@ -99,8 +98,6 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
     })();
   }, [loadWines]);
 
-  // Pick up the other phone's changes: when the app comes back to the
-  // foreground, and every so often while it's open.
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === 'visible') loadWines();
@@ -140,6 +137,57 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
     } catch (err) {
       notify(err instanceof Error ? err.message : 'That change was not saved.', 'error');
     }
+  };
+
+  const handleUpdateStock = async (wine: Wine, nextStock: number) => {
+    try {
+      upsert(await updateWineApi(wine.id, { changes: { stock: nextStock } }));
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Could not update rack count.', 'error');
+    }
+  };
+
+  const handleAddPurchase = async (wine: Wine, entry: PurchaseEntry, addStock: number) => {
+    const prevHistory = wine.purchaseHistory ?? [];
+    const nextHistory = [...prevHistory];
+    // Preserve the prior purchase in history if it had a store or price and isn't already recorded
+    if (
+      (wine.purchase?.store || wine.purchase?.price > 0) &&
+      !nextHistory.some(
+        (h) =>
+          h.date === (wine.purchase.date ?? '') &&
+          h.store === canonicalShop(wine.purchase.store) &&
+          h.price === wine.purchase.price
+      )
+    ) {
+      nextHistory.unshift({
+        id: `p-prev-${Date.now()}`,
+        store: canonicalShop(wine.purchase.store),
+        price: wine.purchase.price,
+        currency: wine.purchase.currency || '£',
+        date: wine.purchase.date || wine.createdAt.slice(0, 10),
+        isSpecialOffer: wine.purchase.isSpecialOffer,
+      });
+    }
+    nextHistory.unshift(entry);
+    const nextStock = Math.min(99, (wine.stock ?? 0) + Math.max(0, addStock));
+
+    const saved = await updateWineApi(wine.id, {
+      changes: {
+        purchase: {
+          store: entry.store,
+          price: entry.price,
+          currency: entry.currency,
+          date: entry.date,
+          isSpecialOffer: entry.isSpecialOffer,
+          notes: wine.purchase?.notes ?? '',
+        },
+        purchaseHistory: nextHistory.slice(0, 50),
+        stock: nextStock,
+      },
+    });
+    upsert(saved);
+    notify(`Recorded purchase of ${wine.name}.`, 'success');
   };
 
   const handleRate = async (wineId: string, review: ReviewInput | null) => {
@@ -196,7 +244,6 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         await createWineApi({
           changes: {
             ...recommendationDraft(rec),
-            // Not tasted yet: no verdict or score of your own.
             tasted: false,
             wishlist: true,
             jointNotes: [
@@ -214,6 +261,18 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
     }
   };
 
+  const handleSaveShelfDraftToWishlist = async (scannedDraft: Partial<Wine>) => {
+    const saved = await createWineApi({
+      changes: {
+        ...scannedDraft,
+        tasted: false,
+        wishlist: true,
+      },
+    });
+    upsert(saved);
+    notify(`Saved ${saved.name} to To Try.`, 'success');
+  };
+
   const openAdd = (opts: { editing?: Wine; draft?: Partial<Wine>; mode?: 'tasted' | 'wishlist' } = {}) => {
     setEditingWine(opts.editing ?? null);
     setDraft(opts.draft ?? null);
@@ -221,7 +280,7 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
     setIsAddModalOpen(true);
   };
 
-  // Counts for verdict & style filter strips
+  // Counts for verdict, style & in-stock filters
   const verdictCounts = useMemo(() => {
     const c: Record<string, number> = { all: tastedWines.length };
     for (const w of tastedWines) c[w.coupleVerdict] = (c[w.coupleVerdict] || 0) + 1;
@@ -233,6 +292,11 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
     for (const w of tastedWines) c[w.type] = (c[w.type] || 0) + 1;
     return c;
   }, [tastedWines]);
+
+  const inStockCount = useMemo(
+    () => tastedWines.filter((w) => (w.stock ?? 0) > 0).length,
+    [tastedWines]
+  );
 
   const tastedShops = useMemo(() => {
     const set = new Set<string>();
@@ -258,6 +322,7 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         if (activeVerdict !== 'all' && w.coupleVerdict !== activeVerdict) return false;
         if (activeType !== 'all' && w.type !== activeType) return false;
         if (activeShop !== 'all' && canonicalShop(w.purchase?.store) !== activeShop) return false;
+        if (inStockOnly && !(w.stock && w.stock > 0)) return false;
         return true;
       })
       .sort((a, b) => {
@@ -266,9 +331,8 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         if (sortBy === 'price-high') return (b.purchase?.price || 0) - (a.purchase?.price || 0);
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
-  }, [tastedWines, searchQuery, activeVerdict, activeType, activeShop, sortBy]);
+  }, [tastedWines, searchQuery, activeVerdict, activeType, activeShop, inStockOnly, sortBy]);
 
-  // The shopping tab honours the search box too.
   const searchedWines = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return wines;
@@ -282,16 +346,18 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
   const customShops = useMemo(() => customShopsFrom(wines.map((w) => w.purchase?.store)), [wines]);
   const popularShops = useMemo(() => popularShopsFrom(wines.map((w) => w.purchase?.store), 6), [wines]);
   const wishlistWineNames = useMemo(() => wines.filter((w) => w.wishlist).map((w) => w.name.toLowerCase()), [wines]);
-  const filtersActive = Boolean(searchQuery || activeVerdict !== 'all' || activeType !== 'all' || activeShop !== 'all');
+  const filtersActive = Boolean(
+    searchQuery || activeVerdict !== 'all' || activeType !== 'all' || activeShop !== 'all' || inStockOnly
+  );
 
   const resetFilters = () => {
     setSearchQuery('');
     setActiveVerdict('all');
     setActiveType('all');
     setActiveShop('all');
+    setInStockOnly(false);
   };
 
-  // Names come from the accounts; settings only fills them in once loaded.
   const namedSettings: UserSettings = {
     ...settings,
     partner1Name: me.slot === 1 ? me.name : partner?.name ?? settings.partner1Name,
@@ -327,12 +393,15 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
             onShopClick={setShopView}
             onLogWishlistWine={(w) => openAdd({ editing: w })}
             onAddToWishlist={() => openAdd({ mode: 'wishlist' })}
+            onOpenShelfCheck={() => setIsShelfCheckOpen(true)}
           />
         ) : activeTab === 'recommendations' ? (
           <RecommendedSection
             settings={namedSettings}
+            wines={wines}
             onAddToWishlist={handleAddRecommendationToWishlist}
             onLogAsTasted={(rec) => openAdd({ draft: recommendationDraft(rec), mode: 'tasted' })}
+            onOpenWine={(w) => setSelectedId(w.id)}
             onOpenSettings={() => setIsSettingsModalOpen(true)}
             wishlistWineNames={wishlistWineNames}
           />
@@ -347,6 +416,14 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
           />
         ) : (
           <>
+            {/* Partner Activity Strip */}
+            <ActivityStrip
+              wines={wines}
+              me={me}
+              partner={partner}
+              onOpenWine={(w) => setSelectedId(w.id)}
+            />
+
             {/* Awaiting Your Verdict Deck Card */}
             {myTurn.length > 0 && (
               <button
@@ -450,6 +527,9 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
               onSelectType={setActiveType}
               activeShop={activeShop}
               onSelectShop={setActiveShop}
+              inStockOnly={inStockOnly}
+              onToggleInStockOnly={() => setInStockOnly((v) => !v)}
+              inStockCount={inStockCount}
               shops={tastedShops}
               sortBy={sortBy}
               onSortChange={setSortBy}
@@ -562,6 +642,10 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         }
         onAddComment={handleAddComment}
         onDeleteComment={handleDeleteComment}
+        onUpdateStock={handleUpdateStock}
+        onAddPurchase={handleAddPurchase}
+        customShops={customShops}
+        popularShops={popularShops}
         wishlistNames={wishlistWineNames}
         onAddToWishlist={handleAddRecommendationToWishlist}
         onShopClick={(shop) => {
@@ -592,12 +676,29 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
         me={me}
         partner={partner}
         settings={namedSettings}
+        wines={wines}
         editingWine={editingWine}
         draft={draft}
         initialMode={addMode}
         onSubmit={handleSubmitWine}
+        onOpenExisting={(w) => setSelectedId(w.id)}
+        onLogBoughtAgain={handleAddPurchase}
         customShops={customShops}
         popularShops={popularShops}
+      />
+
+      <ShelfCheckModal
+        isOpen={isShelfCheckOpen}
+        onClose={() => setIsShelfCheckOpen(false)}
+        me={me}
+        partner={partner}
+        hasGeminiKey={namedSettings.hasGeminiKey}
+        onOpenExisting={(w) => setSelectedId(w.id)}
+        onBoughtAgain={(w) => {
+          setSelectedId(w.id);
+        }}
+        onSaveToTry={handleSaveShelfDraftToWishlist}
+        onLogTasted={(d) => openAdd({ draft: d, mode: 'tasted' })}
       />
 
       {rateSession && (

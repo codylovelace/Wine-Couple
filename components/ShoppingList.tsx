@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Plus,
   Bookmark,
+  ScanLine,
 } from 'lucide-react';
 
 interface ShoppingListProps {
@@ -29,6 +30,7 @@ interface ShoppingListProps {
   onShopClick: (shop: string) => void;
   onLogWishlistWine: (wine: Wine) => void;
   onAddToWishlist: () => void;
+  onOpenShelfCheck: () => void;
 }
 
 const NO_SHOP = 'Shop not recorded';
@@ -45,6 +47,7 @@ export function ShoppingList({
   onShopClick,
   onLogWishlistWine,
   onAddToWishlist,
+  onOpenShelfCheck,
 }: ShoppingListProps) {
   const [view, setView] = useState<'again' | 'try'>('again');
   const [selectedShop, setSelectedShop] = useState<string>('all');
@@ -101,6 +104,28 @@ export function ShoppingList({
           Standing in the wine aisle? Check what to re-buy or skip.
         </p>
       </div>
+
+      {/* Shelf Check CTA */}
+      <button
+        type="button"
+        onClick={onOpenShelfCheck}
+        className="w-full p-3.5 rounded-2xl surface-highlight flex items-center justify-between gap-3 text-left transition-all hover:border-wine-300 active:scale-[0.99]"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="w-10 h-10 rounded-xl bg-wine-700 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+            <ScanLine className="w-5 h-5" />
+          </span>
+          <div className="min-w-0">
+            <span className="block text-sm font-semibold text-ink-900 leading-tight">
+              Shelf Check — Scan before buying
+            </span>
+            <span className="block text-xs text-ink-500 truncate mt-0.5">
+              See if we&apos;ve tried it or if it matches our palate
+            </span>
+          </div>
+        </div>
+        <ChevronRight className="w-4 h-4 text-wine-700 flex-shrink-0" />
+      </button>
 
       {/* Inline Search */}
       <div className="relative">
@@ -261,6 +286,11 @@ export function ShoppingList({
                                     .filter(Boolean)
                                     .join(' · ')}
                                 </p>
+                                {(w.stock ?? 0) > 0 && (
+                                  <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-wine-50 border border-wine-200 text-[10px] font-semibold text-wine-700 tabular-nums">
+                                    {w.stock} in rack
+                                  </span>
+                                )}
                               </div>
                               <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                                 {w.purchase?.price > 0 && (

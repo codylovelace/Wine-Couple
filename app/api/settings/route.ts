@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSettings, toPublicSettings, updateSettings } from '@/lib/db';
+import { getSettings, SettingsValidationError, toPublicSettings, updateSettings } from '@/lib/db';
 import { getUsers, withUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -18,6 +18,9 @@ export const POST = withUser(async (request: NextRequest) => {
     const updated = await updateSettings(await request.json());
     return NextResponse.json({ success: true, settings: toPublicSettings(updated, await getUsers()) });
   } catch (error) {
+    if (error instanceof SettingsValidationError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
     console.error('Settings POST error:', error);
     return NextResponse.json({ success: false, error: 'Failed to update settings' }, { status: 500 });
   }

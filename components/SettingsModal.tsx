@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { PublicUser, UserSettings, Wine } from '@/lib/types';
 import { api } from '@/lib/api-client';
-import { X, User, Key, Download, Upload, LogOut, Lock, Sliders } from 'lucide-react';
+import { X, User, Key, Download, Upload, LogOut, Lock, Sliders, Bell } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -62,11 +62,13 @@ export function SettingsModal({
   const [resetOwnPassword, setResetOwnPassword] = useState('');
   const [partnerPassword, setPartnerPassword] = useState('');
   const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [webhookUrl, setWebhookUrl] = useState('');
 
   const nameAction = useAction();
   const passwordAction = useAction();
   const partnerAction = useAction();
   const prefsAction = useAction();
+  const webhookAction = useAction();
   const backupAction = useAction();
 
   useEffect(() => {
@@ -77,14 +79,19 @@ export function SettingsModal({
     setResetOwnPassword('');
     setPartnerPassword('');
     setGeminiApiKey('');
-    [nameAction, passwordAction, partnerAction, prefsAction, backupAction].forEach((a) => a.clear());
+    setWebhookUrl('');
+    [nameAction, passwordAction, partnerAction, prefsAction, webhookAction, backupAction].forEach((a) => a.clear());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const saveSettings = (body: { defaultCurrency?: string; geminiApiKey?: string }, done: string) =>
-    prefsAction.run(async () => {
+  const saveSettings = (
+    body: { defaultCurrency?: string; geminiApiKey?: string; webhookUrl?: string },
+    done: string,
+    action = prefsAction
+  ) =>
+    action.run(async () => {
       const { settings: updated } = await api<{ settings: UserSettings }>('/api/settings', { method: 'POST', body });
       onSettingsChanged(updated);
       return done;
@@ -359,6 +366,73 @@ export function SettingsModal({
               )}
             </form>
             {prefsAction.view}
+          </section>
+
+          {/* Partner Notifications Webhook */}
+          <section className={cardClass}>
+            <h3 className={titleClass}>
+              <Bell className="w-3.5 h-3.5 text-wine-700" />
+              <span>Partner notifications (Webhook)</span>
+            </h3>
+            <p className="text-xs text-ink-500 leading-relaxed">
+              Optional Home Assistant, n8n, or ntfy webhook URL to ping when either of you logs, rates, or comments on a bottle.
+              {settings.hasWebhook && (
+                <span className="block text-emerald-700 font-semibold mt-1">
+                  Webhook active{settings.webhookHost ? ` (${settings.webhookHost})` : ''}.
+                </span>
+              )}
+            </p>
+            <form
+              className="space-y-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveSettings({ webhookUrl }, 'Webhook saved.', webhookAction).then(() => setWebhookUrl(''));
+              }}
+            >
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  placeholder={settings.hasWebhook ? 'Enter new URL to replace it' : 'https://…'}
+                  autoComplete="off"
+                  className={inputClass}
+                />
+                <button
+                  type="submit"
+                  disabled={webhookAction.busy || !webhookUrl.trim()}
+                  className={buttonClass}
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+            {settings.hasWebhook && (
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <button
+                  type="button"
+                  disabled={webhookAction.busy}
+                  onClick={() =>
+                    webhookAction.run(async () => {
+                      await api('/api/settings/webhook-test', { method: 'POST' });
+                      return 'Test notification sent!';
+                    })
+                  }
+                  className="px-3 py-1.5 rounded-xl btn-secondary text-xs font-semibold"
+                >
+                  Send test ping
+                </button>
+                <button
+                  type="button"
+                  disabled={webhookAction.busy}
+                  onClick={() => saveSettings({ webhookUrl: '' }, 'Webhook removed.', webhookAction)}
+                  className="text-xs text-ink-500 hover:text-ink-900 underline underline-offset-2"
+                >
+                  Remove webhook
+                </button>
+              </div>
+            )}
+            {webhookAction.view}
           </section>
 
           {/* Backup */}

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteWine, getWineById, storeImage, updateWine, WineNotFoundError } from '@/lib/db';
-import { withUser } from '@/lib/auth';
+import { getUsers, withUser } from '@/lib/auth';
+import { VERDICTS } from '@/lib/types';
 import { applyReview, applySharedFields, cleanReviewInput, cleanSharedFields } from '@/lib/wine-logic';
+import { notifyPartnerWebhook } from '@/lib/webhook';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,12 +29,36 @@ export const PATCH = withUser(async (request: NextRequest, user, { params }: Ctx
       return NextResponse.json({ success: false, error: 'The wine needs a name.' }, { status: 400 });
     }
     if (fields.imageUrl !== undefined) fields.imageUrl = await storeImage(fields.imageUrl);
+    if (fields.backImageUrl !== undefined) fields.backImageUrl = await storeImage(fields.backImageUrl);
     const review = cleanReviewInput(body.myReview);
 
     const wine = await updateWine(id, user.id, (w) => {
       applySharedFields(w, fields);
       if (review !== undefined) applyReview(w, user.slot, user.name, review);
     });
+
+    if (review !== undefined) {
+      const partner = (await getUsers()).find((u) => u.id !== user.id);
+      const verdictCfg = VERDICTS[wine.coupleVerdict];
+      const bothRated = Boolean(wine.partner1Review && wine.partner2Review);
+      const message =
+        review === null
+          ? `${user.name} marked ${wine.name} as didn't taste.`
+          : bothRated
+            ? `${user.name} rated ${wine.name} — Couple verdict: ${verdictCfg?.label ?? wine.coupleVerdict}!`
+            : `${user.name} rated ${wine.name} — waiting for ${partner?.name ?? 'you'}!`;
+      void notifyPartnerWebhook({
+        event: 'wine.rated',
+        title: `Wine rated: ${wine.name}`,
+        message,
+        actor: user.name,
+        targetPartner: partner?.name,
+        wineId: wine.id,
+        wineName: wine.name,
+        verdict: wine.coupleVerdict,
+      });
+    }
+
     return NextResponse.json({ success: true, wine });
   } catch (error) {
     if (error instanceof WineNotFoundError) return notFound();

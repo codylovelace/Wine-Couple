@@ -1,13 +1,22 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Wine, VERDICTS, PublicUser, PartnerReview, isTasted, partnersDisagree } from '@/lib/types';
+import {
+  Wine,
+  VERDICTS,
+  PublicUser,
+  PartnerReview,
+  PurchaseEntry,
+  isTasted,
+  partnersDisagree,
+} from '@/lib/types';
 import { reviewFor, reviewStatus } from '@/lib/wine-logic';
 import { formatDate, timeAgo, wineTitle } from '@/lib/format';
 import { canonicalShop } from '@/lib/shops';
 import { WINE_TYPE_META } from '@/lib/wine-meta';
 import { WineRecommendation } from '@/lib/recommendations';
 import { MoreLikeThis } from '@/components/MoreLikeThis';
+import { ShopPicker } from '@/components/ShopPicker';
 import {
   X,
   Star,
@@ -23,6 +32,11 @@ import {
   MessageCircle,
   Heart,
   Maximize2,
+  Minus,
+  Plus,
+  Tag,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 
 interface WineDetailModalProps {
@@ -36,6 +50,10 @@ interface WineDetailModalProps {
   onRate: (wine: Wine) => void;
   onAddComment: (wine: Wine, text: string) => Promise<void>;
   onDeleteComment: (wine: Wine, commentId: string) => Promise<void>;
+  onUpdateStock: (wine: Wine, nextStock: number) => Promise<void>;
+  onAddPurchase: (wine: Wine, entry: PurchaseEntry, addStock: number) => Promise<void>;
+  customShops: string[];
+  popularShops?: string[];
   // Lower-cased names already on the wishlist, for the "More like this" buttons.
   wishlistNames: string[];
   onAddToWishlist: (rec: WineRecommendation) => void;
@@ -45,6 +63,7 @@ interface WineDetailModalProps {
 }
 
 const sectionTitle = 'text-[11px] font-semibold tracking-wider text-wine-700 uppercase';
+const today = () => new Date().toISOString().split('T')[0];
 
 function formatReviewBadge(r: PartnerReview): string {
   const parts = [
@@ -65,6 +84,10 @@ export function WineDetailModal({
   onRate,
   onAddComment,
   onDeleteComment,
+  onUpdateStock,
+  onAddPurchase,
+  customShops,
+  popularShops = [],
   wishlistNames,
   onAddToWishlist,
   onShopClick,
@@ -74,10 +97,34 @@ export function WineDetailModal({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showFullPhoto, setShowFullPhoto] = useState(false);
+  const [photoSide, setPhotoSide] = useState<'front' | 'back'>('front');
+  const [updatingStock, setUpdatingStock] = useState(false);
+
+  // Repeat purchase mini-form + history drawer
+  const [showBoughtForm, setShowBoughtForm] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [buyShop, setBuyShop] = useState('');
+  const [buyPrice, setBuyPrice] = useState('');
+  const [buyCurrency, setBuyCurrency] = useState('£');
+  const [buyDate, setBuyDate] = useState(today());
+  const [buyOffer, setBuyOffer] = useState(false);
+  const [buyAddRack, setBuyAddRack] = useState(true);
+  const [savingBuy, setSavingBuy] = useState(false);
 
   useEffect(() => {
     setShowFullPhoto(false);
-  }, [wine?.id]);
+    setPhotoSide('front');
+    setShowBoughtForm(false);
+    setShowHistory(false);
+    if (wine) {
+      setBuyShop(canonicalShop(wine.purchase?.store));
+      setBuyPrice(wine.purchase?.price ? String(wine.purchase.price) : '');
+      setBuyCurrency(wine.purchase?.currency || '£');
+      setBuyDate(today());
+      setBuyOffer(false);
+      setBuyAddRack(true);
+    }
+  }, [wine?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!showFullPhoto) return;
@@ -93,14 +140,25 @@ export function WineDetailModal({
   const verdictConfig = VERDICTS[wine.coupleVerdict] || VERDICTS['okay'];
   const typeMeta = WINE_TYPE_META[wine.type] || WINE_TYPE_META.red;
   const tasted = isTasted(wine);
-  const hasPhoto = Boolean(wine.imageUrl);
+  const activePhoto = photoSide === 'back' && wine.backImageUrl ? wine.backImageUrl : wine.imageUrl;
+  const hasPhoto = Boolean(activePhoto);
+  const hasBothPhotos = Boolean(wine.imageUrl && wine.backImageUrl);
   const nameOf = (userId?: string) =>
     userId === me.id ? 'You' : userId && userId === partner?.id ? partner.name : 'Someone';
   const hasProfile = [wine.body, wine.sweetness, wine.tannin, wine.acidity].some((v) => typeof v === 'number');
   const hasPurchase = Boolean(wine.purchase?.store || wine.purchase?.price);
+  const history = wine.purchaseHistory ?? [];
+  const stockCount = wine.stock ?? 0;
   const comments = wine.comments ?? [];
   const { title: heading, subtitle } = wineTitle(wine);
   const shop = canonicalShop(wine.purchase?.store);
+
+  // Lowest price recorded across current purchase + history
+  const allPrices = [
+    ...(wine.purchase?.price > 0 ? [wine.purchase.price] : []),
+    ...history.filter((h) => h.price > 0).map((h) => h.price),
+  ];
+  const lowestPrice = allPrices.length > 1 ? Math.min(...allPrices) : null;
 
   const handleShare = () => {
     const bought = shop
@@ -111,8 +169,6 @@ export function WineDetailModal({
     const text = tasted
       ? `We tasted ${title} (${wine.vintage}): ${verdictConfig.label}${score}.${bought}`
       : `On our wine wishlist: ${title} (${wine.vintage}).`;
-    // navigator.share and navigator.clipboard only exist on HTTPS (or localhost),
-    // so on a plain-HTTP LAN address fall back to a prompt the user can copy from.
     if (navigator.share) {
       navigator.share({ title, text }).catch(() => {});
     } else if (navigator.clipboard) {
@@ -140,6 +196,39 @@ export function WineDetailModal({
     }
   };
 
+  const adjustStock = async (delta: number) => {
+    const next = Math.max(0, Math.min(99, stockCount + delta));
+    if (next === stockCount) return;
+    setUpdatingStock(true);
+    try {
+      await onUpdateStock(wine, next);
+    } finally {
+      setUpdatingStock(false);
+    }
+  };
+
+  const submitRepeatPurchase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingBuy(true);
+    setError(null);
+    try {
+      const entry: PurchaseEntry = {
+        id: `p-${Date.now()}`,
+        store: canonicalShop(buyShop),
+        price: parseFloat(buyPrice) || 0,
+        currency: buyCurrency,
+        date: buyDate || today(),
+        isSpecialOffer: buyOffer,
+      };
+      await onAddPurchase(wine, entry, buyAddRack ? 1 : 0);
+      setShowBoughtForm(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save purchase.');
+    } finally {
+      setSavingBuy(false);
+    }
+  };
+
   const people = [me, partner].filter((p): p is PublicUser => Boolean(p));
 
   const heroControlBtn = hasPhoto
@@ -161,9 +250,9 @@ export function WineDetailModal({
             hasPhoto ? 'bg-ink-900' : 'bg-linen-100 border-b border-linen-200'
           }`}
         >
-          {wine.imageUrl ? (
+          {activePhoto ? (
             <>
-              <img src={wine.imageUrl} alt={heading} className="w-full h-full object-cover" />
+              <img src={activePhoto} alt={heading} className="w-full h-full object-cover" />
               <button
                 type="button"
                 onClick={() => setShowFullPhoto(true)}
@@ -190,7 +279,7 @@ export function WineDetailModal({
               <X className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-2">
-              {wine.imageUrl && (
+              {hasPhoto && (
                 <button
                   type="button"
                   onClick={() => setShowFullPhoto(true)}
@@ -206,9 +295,7 @@ export function WineDetailModal({
                 aria-pressed={Boolean(wine.wishlist)}
                 aria-label={wine.wishlist ? 'Remove from wishlist' : 'Add to wishlist'}
                 className={`w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center border transition-colors ${
-                  wine.wishlist
-                    ? 'bg-wine-700 text-white border-wine-600'
-                    : heroControlBtn
+                  wine.wishlist ? 'bg-wine-700 text-white border-wine-600' : heroControlBtn
                 }`}
               >
                 <Bookmark className={`w-4 h-4 ${wine.wishlist ? 'fill-white text-white' : ''}`} />
@@ -223,6 +310,30 @@ export function WineDetailModal({
               </button>
             </div>
           </div>
+
+          {/* Front / Back Label Toggle */}
+          {hasBothPhotos && (
+            <div className="absolute top-16 right-4 z-10 flex items-center rounded-full bg-ink-900/75 backdrop-blur-md border border-white/20 p-0.5 text-[11px] font-semibold">
+              <button
+                type="button"
+                onClick={() => setPhotoSide('front')}
+                className={`px-2.5 py-1 rounded-full transition-colors ${
+                  photoSide === 'front' ? 'bg-white text-ink-900' : 'text-white/85 hover:text-white'
+                }`}
+              >
+                Front
+              </button>
+              <button
+                type="button"
+                onClick={() => setPhotoSide('back')}
+                className={`px-2.5 py-1 rounded-full transition-colors ${
+                  photoSide === 'back' ? 'bg-white text-ink-900' : 'text-white/85 hover:text-white'
+                }`}
+              >
+                Back
+              </button>
+            </div>
+          )}
 
           {/* Hero Bottom Title & Metadata */}
           <div className="absolute bottom-3.5 left-4 right-4 z-10 space-y-1 pointer-events-none">
@@ -286,39 +397,237 @@ export function WineDetailModal({
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5 font-sans">
-          {/* Purchase Strip */}
-          {hasPurchase && (
-            <section className="p-3.5 rounded-2xl surface-card flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                {shop ? (
-                  <button
-                    type="button"
-                    onClick={() => onShopClick(shop)}
-                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-wine-700 hover:text-wine-900 underline decoration-wine-300 underline-offset-4 max-w-full"
-                  >
-                    <StoreIcon className="w-4 h-4 text-wine-700 flex-shrink-0" />
-                    <span className="truncate">{shop}</span>
-                  </button>
-                ) : (
-                  <p className="flex items-center gap-1.5 text-sm font-semibold text-ink-900">
-                    <StoreIcon className="w-4 h-4 text-wine-700 flex-shrink-0" />
-                    <span className="truncate">Shop not recorded</span>
-                  </p>
-                )}
-                {wine.purchase.date && (
-                  <p className="text-xs text-ink-500 mt-0.5 pl-5">
-                    {tasted ? 'Bought' : 'Saved'} {formatDate(wine.purchase.date)}
-                  </p>
+          {/* Purchase, Price History & In-the-Rack Stock Card */}
+          <section className="surface-card rounded-2xl overflow-hidden">
+            {hasPurchase && (
+              <div className="p-3.5 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  {shop ? (
+                    <button
+                      type="button"
+                      onClick={() => onShopClick(shop)}
+                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-wine-700 hover:text-wine-900 underline decoration-wine-300 underline-offset-4 max-w-full"
+                    >
+                      <StoreIcon className="w-4 h-4 text-wine-700 flex-shrink-0" />
+                      <span className="truncate">{shop}</span>
+                    </button>
+                  ) : (
+                    <p className="flex items-center gap-1.5 text-sm font-semibold text-ink-900">
+                      <StoreIcon className="w-4 h-4 text-wine-700 flex-shrink-0" />
+                      <span className="truncate">Shop not recorded</span>
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 mt-0.5 pl-5 flex-wrap">
+                    {wine.purchase.date && (
+                      <span className="text-xs text-ink-500">
+                        {tasted ? 'Bought' : 'Saved'} {formatDate(wine.purchase.date)}
+                      </span>
+                    )}
+                    {wine.purchase.isSpecialOffer && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-semibold">
+                        <Tag className="w-2.5 h-2.5" /> Offer
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {wine.purchase.price > 0 && (
+                  <div className="text-right flex-shrink-0">
+                    <span className="block text-lg font-semibold text-ink-900 tabular-nums">
+                      {wine.purchase.currency}
+                      {Number(wine.purchase.price).toFixed(2)}
+                    </span>
+                    {lowestPrice !== null && (
+                      <span className="block text-[10px] text-emerald-700 font-semibold tabular-nums">
+                        Low {wine.purchase.currency}
+                        {lowestPrice.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
-              {wine.purchase.price > 0 && (
-                <span className="text-lg font-semibold text-ink-900 flex-shrink-0 tabular-nums">
-                  {wine.purchase.currency}
-                  {Number(wine.purchase.price).toFixed(2)}
-                </span>
-              )}
-            </section>
-          )}
+            )}
+
+            {/* In the rack stepper + Bought again action */}
+            <div
+              className={`px-3.5 py-2.5 flex items-center justify-between gap-2 bg-linen-50/70 ${
+                hasPurchase ? 'border-t border-linen-100' : ''
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-ink-700">In the rack</span>
+                <div className="inline-flex items-center rounded-xl bg-white border border-linen-200">
+                  <button
+                    type="button"
+                    disabled={updatingStock || stockCount <= 0}
+                    onClick={() => adjustStock(-1)}
+                    aria-label="Decrease rack count"
+                    className="p-1.5 text-ink-700 hover:text-wine-700 disabled:opacity-35"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="px-2 text-xs font-semibold text-ink-900 tabular-nums min-w-[24px] text-center">
+                    {stockCount}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={updatingStock}
+                    onClick={() => adjustStock(1)}
+                    aria-label="Increase rack count"
+                    className="p-1.5 text-ink-700 hover:text-wine-700"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowBoughtForm((s) => !s)}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-linen-100 border border-linen-200 text-xs font-semibold text-wine-700"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Bought again</span>
+              </button>
+            </div>
+
+            {/* Inline Bought Again Form */}
+            {showBoughtForm && (
+              <form
+                onSubmit={submitRepeatPurchase}
+                className="p-3.5 border-t border-linen-200 bg-white space-y-2.5 animate-fadeIn"
+              >
+                {popularShops.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {popularShops.slice(0, 4).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setBuyShop(s)}
+                        className={`px-2 py-0.5 rounded-md text-[11px] border ${
+                          canonicalShop(buyShop) === s
+                            ? 'bg-wine-700 text-white border-wine-700 font-semibold'
+                            : 'bg-linen-50 text-ink-700 border-linen-200'
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <ShopPicker
+                  value={buyShop}
+                  onChange={setBuyShop}
+                  customShops={customShops}
+                  selectClass="w-full px-3 py-2 text-xs field-input"
+                  inputClass="w-full px-3 py-2 text-xs field-input"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex">
+                    <select
+                      value={buyCurrency}
+                      onChange={(e) => setBuyCurrency(e.target.value)}
+                      className="px-2 py-2 rounded-l-xl bg-linen-100 border border-r-0 border-linen-200 text-xs text-ink-900 font-semibold"
+                    >
+                      {['£', '$', '€', 'A$'].map((c) => (
+                        <option key={c} value={c} className="bg-white text-ink-900">
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={buyPrice}
+                      onChange={(e) => setBuyPrice(e.target.value)}
+                      placeholder="12.00"
+                      className="w-full px-2.5 py-2 text-xs field-input rounded-l-none min-w-0"
+                    />
+                  </div>
+                  <input
+                    type="date"
+                    value={buyDate}
+                    onChange={(e) => setBuyDate(e.target.value)}
+                    className="w-full px-2.5 py-2 text-xs field-input"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setBuyOffer((o) => !o)}
+                    aria-pressed={buyOffer}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border font-medium ${
+                      buyOffer
+                        ? 'bg-amber-50 border-amber-300 text-amber-800'
+                        : 'bg-linen-50 border-linen-200 text-ink-700'
+                    }`}
+                  >
+                    <Tag className="w-3 h-3" /> Offer
+                  </button>
+                  <label className="inline-flex items-center gap-1.5 text-ink-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={buyAddRack}
+                      onChange={(e) => setBuyAddRack(e.target.checked)}
+                      className="rounded border-linen-300 text-wine-700"
+                    />
+                    <span>+1 to rack</span>
+                  </label>
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowBoughtForm(false)}
+                    className="px-3 py-2 rounded-xl btn-secondary text-xs font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingBuy}
+                    className="flex-1 py-2 rounded-xl btn-primary text-xs font-semibold flex items-center justify-center gap-1"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{savingBuy ? 'Saving…' : 'Save purchase'}</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Collapsible Price History */}
+            {history.length > 0 && (
+              <div className="border-t border-linen-100">
+                <button
+                  type="button"
+                  onClick={() => setShowHistory((s) => !s)}
+                  aria-expanded={showHistory}
+                  className="w-full px-3.5 py-2 flex items-center justify-between text-xs font-medium text-ink-500 hover:text-ink-900"
+                >
+                  <span>Price history ({history.length})</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showHistory ? 'rotate-180' : ''}`} />
+                </button>
+                {showHistory && (
+                  <ul className="px-3.5 pb-2.5 space-y-1.5 text-xs border-t border-linen-100 pt-2">
+                    {history.map((h) => (
+                      <li key={h.id} className="flex items-center justify-between gap-2 text-ink-700">
+                        <span className="truncate">
+                          {h.store || 'Shop not recorded'}
+                          {h.date ? ` · ${formatDate(h.date)}` : ''}
+                          {h.isSpecialOffer ? ' · Offer' : ''}
+                        </span>
+                        {h.price > 0 && (
+                          <span className="font-semibold text-ink-900 tabular-nums flex-shrink-0">
+                            {h.currency}
+                            {Number(h.price).toFixed(2)}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </section>
 
           {/* Untasted Wishlist Banner */}
           {!tasted && (
@@ -640,7 +949,7 @@ export function WineDetailModal({
       </div>
 
       {/* Full Bottle Photo Lightbox */}
-      {showFullPhoto && wine.imageUrl && (
+      {showFullPhoto && activePhoto && (
         <div
           role="dialog"
           aria-modal="true"
@@ -651,7 +960,34 @@ export function WineDetailModal({
           }}
           className="fixed inset-0 z-[60] bg-ink-900/95 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-fadeIn cursor-zoom-out"
         >
-          <div className="w-full max-w-2xl flex justify-end pt-safe mb-3">
+          <div className="w-full max-w-2xl flex items-center justify-between pt-safe mb-3">
+            {hasBothPhotos ? (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center rounded-full bg-white/15 border border-white/20 p-0.5 text-xs font-semibold"
+              >
+                <button
+                  type="button"
+                  onClick={() => setPhotoSide('front')}
+                  className={`px-3 py-1 rounded-full transition-colors ${
+                    photoSide === 'front' ? 'bg-white text-ink-900' : 'text-white/85 hover:text-white'
+                  }`}
+                >
+                  Front
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhotoSide('back')}
+                  className={`px-3 py-1 rounded-full transition-colors ${
+                    photoSide === 'back' ? 'bg-white text-ink-900' : 'text-white/85 hover:text-white'
+                  }`}
+                >
+                  Back
+                </button>
+              </div>
+            ) : (
+              <span />
+            )}
             <button
               type="button"
               onClick={(e) => {
@@ -665,7 +1001,7 @@ export function WineDetailModal({
             </button>
           </div>
           <img
-            src={wine.imageUrl}
+            src={activePhoto}
             alt={heading}
             className="max-w-full max-h-[80dvh] w-auto h-auto object-contain rounded-2xl shadow-2xl border border-white/15"
           />

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createWine, getWines } from '@/lib/db';
-import { withUser } from '@/lib/auth';
-import { Wine } from '@/lib/types';
+import { getUsers, withUser } from '@/lib/auth';
+import { isTasted, Wine } from '@/lib/types';
 import { applyReview, applySharedFields, cleanReviewInput, cleanSharedFields } from '@/lib/wine-logic';
+import { notifyPartnerWebhook } from '@/lib/webhook';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +55,20 @@ export const POST = withUser(async (request: NextRequest, user) => {
     if (review !== undefined) applyReview(wine, user.slot, user.name, review);
 
     const saved = await createWine(wine);
+
+    if (isTasted(saved)) {
+      const partner = (await getUsers()).find((u) => u.id !== user.id);
+      void notifyPartnerWebhook({
+        event: 'wine.logged',
+        title: `New wine logged: ${saved.name}`,
+        message: `${user.name} logged ${saved.name} — your turn to swipe!`,
+        actor: user.name,
+        targetPartner: partner?.name,
+        wineId: saved.id,
+        wineName: saved.name,
+      });
+    }
+
     return NextResponse.json({ success: true, wine: saved }, { status: 201 });
   } catch (error) {
     console.error('API /api/wines POST error:', error);

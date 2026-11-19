@@ -5,6 +5,7 @@ import {
   PartnerReview,
   PartnerSlot,
   PurchaseDetails,
+  PurchaseEntry,
   Verdict,
   VERDICTS,
   Wine,
@@ -124,6 +125,7 @@ export type SharedWineFields = Pick<
   | 'country'
   | 'abv'
   | 'imageUrl'
+  | 'backImageUrl'
   | 'coupleVerdict'
   | 'jointNotes'
   | 'body'
@@ -133,6 +135,8 @@ export type SharedWineFields = Pick<
   | 'aromaTags'
   | 'foodPairings'
   | 'purchase'
+  | 'purchaseHistory'
+  | 'stock'
   | 'onlineLinks'
   | 'wishlist'
   | 'tasted'
@@ -201,6 +205,15 @@ export function cleanSharedFields(raw: unknown): Partial<SharedWineFields> {
 
   const img = image(r.imageUrl);
   if (img !== undefined) out.imageUrl = img;
+  const backImg = image(r.backImageUrl);
+  if (backImg !== undefined) out.backImageUrl = backImg;
+
+  if (r.stock !== undefined) {
+    const stockNum = Number(r.stock);
+    if (Number.isInteger(stockNum) && stockNum >= 0 && stockNum <= 99) {
+      out.stock = stockNum;
+    }
+  }
 
   for (const key of ['body', 'sweetness', 'tannin', 'acidity'] as const) {
     const v = scale(r[key]);
@@ -214,6 +227,25 @@ export function cleanSharedFields(raw: unknown): Partial<SharedWineFields> {
 
   const p = purchase(r.purchase);
   if (p) out.purchase = p;
+
+  if (Array.isArray(r.purchaseHistory)) {
+    const history: PurchaseEntry[] = [];
+    for (const item of r.purchaseHistory.slice(0, 50)) {
+      if (!item || typeof item !== 'object') continue;
+      const e = item as Record<string, unknown>;
+      const priceVal = Number(e.price);
+      history.push({
+        id: text(e.id, 60) || `p-${history.length + 1}`,
+        store: canonicalShop(text(e.store, 100) ?? ''),
+        price: Number.isFinite(priceVal) && priceVal >= 0 ? Math.round(priceVal * 100) / 100 : 0,
+        currency: text(e.currency, 4) || '£',
+        date: text(e.date, 10) || '',
+        isSpecialOffer: e.isSpecialOffer === true,
+        notes: text(e.notes, 500) || undefined,
+      });
+    }
+    out.purchaseHistory = history;
+  }
 
   if (r.onlineLinks && typeof r.onlineLinks === 'object') {
     const links: Record<string, string> = {};
