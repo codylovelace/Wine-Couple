@@ -84,13 +84,13 @@ export function RateSheet({
     if (partner && partnerLiked !== null) {
       if (liked && partnerLiked) {
         return (
-          <div className="p-4 rounded-2xl bg-emerald-500/12 border border-emerald-400/30 text-center space-y-1">
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-300">
+          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-1">
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-700">
               <Sparkles className="w-3.5 h-3.5" />
               <span>It&apos;s a Match</span>
             </div>
-            <p className="font-serif text-xl font-semibold text-emerald-100">Must Buy Again</p>
-            <p className="text-xs text-stone-300">
+            <p className="font-serif text-xl font-semibold text-emerald-950">Must Buy Again</p>
+            <p className="text-xs text-emerald-800/90">
               Both you and {partner.name} would buy this bottle again.
             </p>
           </div>
@@ -98,26 +98,26 @@ export function RateSheet({
       }
       if (!liked && !partnerLiked) {
         return (
-          <div className="p-4 rounded-2xl bg-rose-500/12 border border-rose-400/30 text-center space-y-1">
-            <span className="block text-xs font-semibold uppercase tracking-wider text-rose-300">
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-center space-y-1">
+            <span className="block text-xs font-semibold uppercase tracking-wider text-rose-700">
               Both Passed
             </span>
-            <p className="font-serif text-xl font-semibold text-rose-100">Marked Avoid</p>
-            <p className="text-xs text-stone-300">
+            <p className="font-serif text-xl font-semibold text-rose-950">Marked Avoid</p>
+            <p className="text-xs text-rose-800/90">
               Neither you nor {partner.name} want to pick this one up again.
             </p>
           </div>
         );
       }
       return (
-        <div className="p-4 rounded-2xl bg-violet-500/12 border border-violet-400/30 text-center space-y-1">
-          <span className="block text-xs font-semibold uppercase tracking-wider text-violet-300">
+        <div className="p-4 rounded-2xl bg-violet-50 border border-violet-200 text-center space-y-1">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-violet-700">
             Split Decision
           </span>
-          <p className="font-serif text-xl font-semibold text-violet-100">
+          <p className="font-serif text-xl font-semibold text-violet-950">
             {liked ? `You liked it · ${partner.name} passed` : `You passed · ${partner.name} liked it`}
           </p>
-          <p className="text-xs text-stone-300">Saved as a Split Decision in your cellar.</p>
+          <p className="text-xs text-violet-800/90">Saved as a Split Decision in your cellar.</p>
         </div>
       );
     }
@@ -125,21 +125,21 @@ export function RateSheet({
     return (
       <div
         className={`p-4 rounded-2xl border text-center space-y-1 ${
-          liked ? 'bg-emerald-500/10 border-emerald-400/25' : 'bg-rose-500/10 border-rose-400/25'
+          liked ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'
         }`}
       >
         <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider">
           {liked ? (
-            <Heart className="w-3.5 h-3.5 text-emerald-300 fill-emerald-400/40" />
+            <Heart className="w-3.5 h-3.5 text-emerald-700 fill-emerald-500/30" />
           ) : (
-            <X className="w-3.5 h-3.5 text-rose-300" />
+            <X className="w-3.5 h-3.5 text-rose-700" />
           )}
-          <span className={liked ? 'text-emerald-300' : 'text-rose-300'}>
+          <span className={liked ? 'text-emerald-800' : 'text-rose-800'}>
             {liked ? 'You would buy again' : 'You passed'}
           </span>
         </div>
         {partner && (
-          <p className="text-xs text-stone-300">
+          <p className="text-xs text-ink-700">
             Saved — waiting for {partner.name}&apos;s verdict.
           </p>
         )}
@@ -149,20 +149,20 @@ export function RateSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-ink-900/45 backdrop-blur-sm animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md max-h-[94dvh] bg-cellar-900 border border-white/10 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
+        className="w-full max-w-md max-h-[94dvh] bg-linen-50 border border-linen-200 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
+        <div className="p-4 bg-white border-b border-linen-200 flex items-center justify-between">
           <div>
-            <h2 className="font-serif font-semibold text-xl text-champagne-50">
+            <h2 className="font-serif font-semibold text-xl text-ink-900">
               {startAtSummary ? 'Update your rating' : 'Your turn to rate'}
             </h2>
             {items.length > 1 && (
-              <p className="text-xs text-stone-400 tabular-nums">
+              <p className="text-xs text-ink-500 tabular-nums">
                 Bottle {index + 1} of {items.length}
               </p>
             )}
@@ -171,7 +171,7 @@ export function RateSheet({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="w-9 h-9 rounded-full bg-cellar-800 hover:bg-cellar-700 text-stone-300 hover:text-white flex items-center justify-center border border-white/10"
+            className="w-9 h-9 rounded-full bg-linen-100 hover:bg-linen-200 text-ink-700 flex items-center justify-center border border-linen-200"
           >
             <X className="w-4 h-4" />
           </button>
@@ -197,8 +197,8 @@ export function RateSheet({
           ) : (
             <div className="space-y-4 animate-fadeIn">
               <div className="text-center space-y-0.5">
-                <p className="font-serif text-2xl text-champagne-50 font-semibold leading-tight">{title}</p>
-                {subtitle && <p className="text-xs text-champagne-300/85">{subtitle}</p>}
+                <p className="font-serif text-2xl text-ink-900 font-semibold leading-tight">{title}</p>
+                {subtitle && <p className="text-xs text-wine-700 font-medium">{subtitle}</p>}
               </div>
 
               {/* Instant Couple Reveal Card */}
@@ -206,7 +206,7 @@ export function RateSheet({
 
               {/* Optional Stars */}
               <div className="surface-card rounded-2xl p-4 space-y-2 text-center">
-                <span className="text-xs font-medium text-stone-300 block">Star rating (optional)</span>
+                <span className="text-xs font-medium text-ink-700 block">Star rating (optional)</span>
                 <div className="flex items-center justify-center gap-1.5">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -218,7 +218,7 @@ export function RateSheet({
                     >
                       <Star
                         className={`w-8 h-8 transition-colors ${
-                          rating >= star ? 'fill-champagne-gold text-champagne-gold' : 'text-stone-700 hover:text-stone-500'
+                          rating >= star ? 'fill-champagne-gold text-champagne-gold' : 'text-linen-300 hover:text-champagne-300'
                         }`}
                       />
                     </button>
@@ -239,7 +239,7 @@ export function RateSheet({
                 <button
                   type="button"
                   onClick={() => setLiked(null)}
-                  className="text-stone-400 hover:text-champagne-200 underline underline-offset-2"
+                  className="text-ink-500 hover:text-wine-700 underline underline-offset-2 font-medium"
                 >
                   Change my swipe
                 </button>
@@ -247,7 +247,7 @@ export function RateSheet({
                   type="button"
                   disabled={saving}
                   onClick={() => save(null)}
-                  className="text-stone-400 hover:text-stone-200"
+                  className="text-ink-500 hover:text-ink-900 font-medium"
                 >
                   I didn&apos;t taste this one
                 </button>
@@ -256,13 +256,13 @@ export function RateSheet({
           )}
 
           {error && (
-            <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-400/25 rounded-xl p-2.5" role="alert">
+            <p className="text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-xl p-2.5" role="alert">
               {error}
             </p>
           )}
         </div>
 
-        <div className="p-4 modal-footer-safe border-t border-white/[0.08] flex items-center gap-3">
+        <div className="p-4 modal-footer-safe bg-white border-t border-linen-200 flex items-center gap-3">
           <button
             type="button"
             onClick={next}
@@ -277,7 +277,7 @@ export function RateSheet({
               onClick={() => save({ liked, rating, notes: notes.trim() })}
               className="flex-1 py-3 px-4 rounded-xl btn-primary text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
             >
-              <Check className="w-4 h-4 text-champagne-gold" />
+              <Check className="w-4 h-4" />
               <span>{saving ? 'Saving…' : index + 1 < items.length ? 'Save & Next' : 'Save Rating'}</span>
             </button>
           )}

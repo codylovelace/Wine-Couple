@@ -60,7 +60,7 @@ interface AddWineModalProps {
 const today = () => new Date().toISOString().split('T')[0];
 
 const inputClass = 'w-full mt-1 px-3 py-2.5 text-sm field-input';
-const labelClass = 'text-[11px] text-stone-400 uppercase font-sans font-semibold tracking-wider';
+const labelClass = 'text-[11px] text-ink-500 uppercase font-sans font-semibold tracking-wider';
 
 export function AddWineModal({
   isOpen,
@@ -403,18 +403,18 @@ export function AddWineModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-ink-900/45 backdrop-blur-sm animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md max-h-[94dvh] bg-cellar-900 border border-white/10 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
+        className="w-full max-w-md max-h-[94dvh] bg-linen-50 border border-linen-200 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header with Clean Step Bars */}
-        <div className="p-4 border-b border-white/[0.08] bg-cellar-900/95 space-y-2.5">
+        <div className="p-4 bg-white border-b border-linen-200 space-y-2.5">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-serif font-semibold text-xl text-champagne-50 tracking-wide">
+              <h2 className="font-serif font-semibold text-xl text-ink-900 tracking-wide">
                 {editing
                   ? 'Edit bottle'
                   : mode === 'wishlist'
@@ -422,7 +422,7 @@ export function AddWineModal({
                     : 'Log a tasting'}
               </h2>
               {!editing && (
-                <p className="text-xs text-stone-400 font-sans">
+                <p className="text-xs text-ink-500 font-sans">
                   {step === 'photo'
                     ? 'Photo & label scan'
                     : step === 'verdict'
@@ -437,7 +437,7 @@ export function AddWineModal({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="w-9 h-9 rounded-full bg-cellar-800 hover:bg-cellar-700 text-stone-300 hover:text-white flex items-center justify-center border border-white/10"
+              className="w-9 h-9 rounded-full bg-linen-100 hover:bg-linen-200 text-ink-700 flex items-center justify-center border border-linen-200"
             >
               <X className="w-4 h-4" />
             </button>
@@ -449,7 +449,7 @@ export function AddWineModal({
                 <span
                   key={idx}
                   className={`h-1 flex-1 rounded-full transition-colors ${
-                    idx + 1 <= currentStepNum ? 'bg-champagne-gold' : 'bg-cellar-800'
+                    idx + 1 <= currentStepNum ? 'bg-wine-700' : 'bg-linen-200'
                   }`}
                 />
               ))}
@@ -463,7 +463,7 @@ export function AddWineModal({
             <div className="space-y-4">
               {/* Mode Switcher: Tasted vs Wishlist */}
               {canToggleMode && (
-                <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-cellar-950 border border-white/[0.08]" role="tablist">
+                <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-linen-100 border border-linen-200" role="tablist">
                   <button
                     type="button"
                     role="tab"
@@ -471,8 +471,8 @@ export function AddWineModal({
                     onClick={() => setMode('tasted')}
                     className={`py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
                       mode === 'tasted'
-                        ? 'bg-wine-800 text-champagne-50 border border-champagne-400/35'
-                        : 'text-stone-400 hover:text-stone-200 border border-transparent'
+                        ? 'bg-white text-wine-700 border border-linen-200 shadow-sm'
+                        : 'text-ink-500 hover:text-ink-900 border border-transparent'
                     }`}
                   >
                     <WineIcon className="w-3.5 h-3.5" />
@@ -485,8 +485,8 @@ export function AddWineModal({
                     onClick={() => setMode('wishlist')}
                     className={`py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
                       mode === 'wishlist'
-                        ? 'bg-wine-800 text-champagne-50 border border-champagne-400/35'
-                        : 'text-stone-400 hover:text-stone-200 border border-transparent'
+                        ? 'bg-white text-wine-700 border border-linen-200 shadow-sm'
+                        : 'text-ink-500 hover:text-ink-900 border border-transparent'
                     }`}
                   >
                     <Bookmark className="w-3.5 h-3.5" />
@@ -496,8 +496,8 @@ export function AddWineModal({
               )}
 
               <div className="text-center py-1 space-y-1">
-                <h3 className="font-serif text-2xl text-champagne-50 font-semibold">Snap the bottle label</h3>
-                <p className="text-xs text-stone-400 max-w-xs mx-auto leading-relaxed">
+                <h3 className="font-serif text-2xl text-ink-900 font-semibold">Snap the bottle label</h3>
+                <p className="text-xs text-ink-500 max-w-xs mx-auto leading-relaxed">
                   {settings.hasGeminiKey
                     ? 'Gemini reads the bottle name, producer, grape, region & vintage automatically.'
                     : 'Add a Gemini key in Settings to read bottle labels automatically.'}
@@ -505,19 +505,19 @@ export function AddWineModal({
               </div>
 
               {scanMessage && !isScanning && !imageUrl.startsWith('data:') && (
-                <div className="p-3 rounded-2xl bg-cellar-850 border border-white/10 text-xs text-stone-200">
+                <div className="p-3 rounded-2xl surface-card text-xs text-ink-700">
                   {scanMessage}
                 </div>
               )}
 
               {isScanning ? (
                 <div className="space-y-3">
-                  <div className="relative h-60 rounded-2xl bg-cellar-950 border border-champagne-400/50 overflow-hidden flex flex-col items-center justify-center p-6 text-center">
+                  <div className="relative h-60 rounded-2xl bg-linen-100 border border-wine-300 overflow-hidden flex flex-col items-center justify-center p-6 text-center">
                     {imageUrl && (
-                      <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-25" />
+                      <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
                     )}
-                    <RefreshCw className="w-8 h-8 text-champagne-gold animate-spin mb-3 z-10" />
-                    <span className="font-serif text-lg font-semibold text-champagne-50 z-10">Reading the label…</span>
+                    <RefreshCw className="w-8 h-8 text-wine-700 animate-spin mb-3 z-10" />
+                    <span className="font-serif text-lg font-semibold text-ink-900 z-10">Reading the label…</span>
                   </div>
                   <StillTrying
                     label="Reading the label"
@@ -527,10 +527,10 @@ export function AddWineModal({
                 </div>
               ) : scanMessage && imageUrl.startsWith('data:') ? (
                 <div className="space-y-3">
-                  <div className="relative h-40 rounded-2xl bg-cellar-950 border border-white/10 overflow-hidden">
-                    <img src={imageUrl} alt="Your photo" className="absolute inset-0 w-full h-full object-cover opacity-65" />
+                  <div className="relative h-40 rounded-2xl bg-linen-100 border border-linen-200 overflow-hidden">
+                    <img src={imageUrl} alt="Your photo" className="absolute inset-0 w-full h-full object-cover opacity-75" />
                   </div>
-                  <p className="p-3 rounded-2xl bg-cellar-850 border border-white/10 text-xs text-stone-200" role="alert">
+                  <p className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800" role="alert">
                     {scanMessage}
                   </p>
                   <div className="grid grid-cols-2 gap-2">
@@ -557,22 +557,22 @@ export function AddWineModal({
                   <button
                     type="button"
                     onClick={() => cameraInputRef.current?.click()}
-                    className="p-5 rounded-2xl surface-highlight hover:border-champagne-400/50 flex flex-col items-center justify-center gap-2.5 text-center transition-all active:scale-[0.98]"
+                    className="p-5 rounded-2xl surface-highlight hover:border-wine-400 flex flex-col items-center justify-center gap-2.5 text-center transition-all active:scale-[0.98]"
                   >
-                    <div className="w-12 h-12 rounded-2xl bg-wine-800/80 border border-champagne-400/35 flex items-center justify-center text-champagne-gold">
+                    <div className="w-12 h-12 rounded-2xl bg-wine-700 text-white flex items-center justify-center shadow-sm">
                       <Camera className="w-5 h-5" />
                     </div>
-                    <span className="text-sm text-champagne-50 font-semibold">Take photo</span>
+                    <span className="text-sm text-ink-900 font-semibold">Take photo</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-5 rounded-2xl surface-card hover:border-white/20 flex flex-col items-center justify-center gap-2.5 text-center transition-all active:scale-[0.98]"
+                    className="p-5 rounded-2xl surface-card hover:border-linen-300 flex flex-col items-center justify-center gap-2.5 text-center transition-all active:scale-[0.98]"
                   >
-                    <div className="w-12 h-12 rounded-2xl bg-cellar-850 border border-white/10 flex items-center justify-center text-champagne-200">
+                    <div className="w-12 h-12 rounded-2xl bg-linen-100 border border-linen-200 flex items-center justify-center text-ink-700">
                       <Upload className="w-5 h-5" />
                     </div>
-                    <span className="text-sm text-stone-100 font-semibold">Choose photo</span>
+                    <span className="text-sm text-ink-900 font-semibold">Choose photo</span>
                   </button>
                 </div>
               )}
@@ -597,7 +597,7 @@ export function AddWineModal({
               <button
                 type="button"
                 onClick={() => setStep(mode === 'wishlist' ? 'details' : 'verdict')}
-                className="w-full py-2 text-center text-xs text-stone-400 hover:text-champagne-200 flex items-center justify-center gap-1 font-medium"
+                className="w-full py-2 text-center text-xs text-ink-500 hover:text-wine-700 flex items-center justify-center gap-1 font-medium"
               >
                 <span>Skip photo &amp; enter details manually</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -625,27 +625,27 @@ export function AddWineModal({
           {step === 'details' && (
             <div className="space-y-4 animate-fadeIn">
               {scanMessage && (
-                <div className="p-3 rounded-2xl bg-cellar-850 border border-white/10 flex items-start justify-between gap-3 text-xs text-stone-200">
+                <div className="p-3 rounded-2xl surface-card flex items-start justify-between gap-3 text-xs text-ink-700">
                   <span>{scanMessage}</span>
                   <button
                     type="button"
                     onClick={() => setStep('photo')}
-                    className="underline text-champagne-gold font-semibold flex-shrink-0"
+                    className="underline text-wine-700 font-semibold flex-shrink-0"
                   >
                     Retake
                   </button>
                 </div>
               )}
               {scanned && (
-                <div className="p-3 rounded-2xl bg-champagne-950/70 border border-champagne-400/30 flex items-center justify-between gap-2 text-xs text-champagne-100">
+                <div className="p-3 rounded-2xl bg-champagne-50 border border-champagne-300 flex items-center justify-between gap-2 text-xs text-ink-900">
                   <span className="flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-champagne-gold flex-shrink-0" />
+                    <Sparkles className="w-4 h-4 text-champagne-deep flex-shrink-0" />
                     <span>Label scanned — review essentials below.</span>
                   </span>
                   <button
                     type="button"
                     onClick={() => setStep('photo')}
-                    className="underline text-champagne-gold font-semibold flex-shrink-0"
+                    className="underline text-wine-700 font-semibold flex-shrink-0"
                   >
                     Rescan
                   </button>
@@ -659,19 +659,19 @@ export function AddWineModal({
                     type="button"
                     onClick={() => setStep('photo')}
                     aria-label={imageUrl ? 'Change bottle photo' : 'Add bottle photo'}
-                    className="w-14 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-cellar-950 border border-white/10 hover:border-champagne-400/40 flex flex-col items-center justify-center text-stone-400 transition-colors relative group"
+                    className="w-14 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-linen-100 border border-linen-200 hover:border-wine-400 flex flex-col items-center justify-center text-ink-500 transition-colors relative group"
                   >
                     {imageUrl ? (
                       <>
                         <img src={imageUrl} alt={name || 'Bottle'} className="w-full h-full object-cover" />
-                        <span className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <span className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                           <Camera className="w-4 h-4 text-white" />
                         </span>
                       </>
                     ) : (
                       <>
-                        <Camera className="w-4 h-4 text-champagne-400/70" />
-                        <span className="text-[10px] mt-1">Photo</span>
+                        <Camera className="w-4 h-4 text-wine-700/70" />
+                        <span className="text-[10px] mt-1 font-medium">Photo</span>
                       </>
                     )}
                   </button>
@@ -703,11 +703,11 @@ export function AddWineModal({
                           aria-pressed={active}
                           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                             active
-                              ? 'bg-wine-800/90 text-champagne-50 border-champagne-400/45 font-semibold'
-                              : 'bg-cellar-950/70 text-stone-300 border-white/10 hover:border-white/20'
+                              ? 'bg-wine-700 text-white border-wine-700 font-semibold shadow-sm'
+                              : 'bg-linen-50 text-ink-700 border-linen-200 hover:border-linen-300'
                           }`}
                         >
-                          <span className={`w-2 h-2 rounded-full ${meta.dotClass}`} />
+                          <span className={`w-2 h-2 rounded-full ${active ? 'bg-white' : meta.dotClass}`} />
                           <span>{meta.label}</span>
                         </button>
                       );
@@ -719,7 +719,7 @@ export function AddWineModal({
               {/* YOUR RATING (only in tasted mode) */}
               {mode === 'tasted' && (
                 <div className="p-4 rounded-2xl surface-highlight space-y-3">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-champagne-200">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-wine-700">
                     Your verdict
                   </h3>
                   {myTasted ? (
@@ -731,8 +731,8 @@ export function AddWineModal({
                           aria-pressed={myLiked === false}
                           className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl border text-xs font-semibold transition-colors ${
                             myLiked === false
-                              ? 'bg-rose-500/20 border-rose-400/50 text-rose-200'
-                              : 'bg-cellar-950/70 border-white/10 text-stone-300 hover:border-white/20'
+                              ? 'bg-rose-50 border-rose-400 text-rose-800'
+                              : 'bg-white border-linen-200 text-ink-700 hover:border-linen-300'
                           }`}
                         >
                           <X className="w-4 h-4" /> Pass
@@ -743,15 +743,15 @@ export function AddWineModal({
                           aria-pressed={myLiked === true}
                           className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl border text-xs font-semibold transition-colors ${
                             myLiked === true
-                              ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-200'
-                              : 'bg-cellar-950/70 border-white/10 text-stone-300 hover:border-white/20'
+                              ? 'bg-emerald-50 border-emerald-400 text-emerald-800'
+                              : 'bg-white border-linen-200 text-ink-700 hover:border-linen-300'
                           }`}
                         >
                           <Heart className="w-4 h-4" /> Buy again
                         </button>
                       </div>
                       <div className="flex items-center gap-1">
-                        <span className="text-xs text-stone-400 mr-1.5">Stars (optional)</span>
+                        <span className="text-xs text-ink-500 mr-1.5">Stars (optional)</span>
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button
                             key={star}
@@ -762,7 +762,7 @@ export function AddWineModal({
                           >
                             <Star
                               className={`w-6 h-6 ${
-                                myRating >= star ? 'fill-champagne-gold text-champagne-gold' : 'text-stone-700'
+                                myRating >= star ? 'fill-champagne-gold text-champagne-gold' : 'text-linen-300'
                               }`}
                             />
                           </button>
@@ -778,33 +778,33 @@ export function AddWineModal({
                       <button
                         type="button"
                         onClick={() => setMyTasted(false)}
-                        className="text-xs text-stone-400 hover:text-stone-200"
+                        className="text-xs text-ink-500 hover:text-ink-900"
                       >
                         I didn&apos;t taste this one
                       </button>
                     </>
                   ) : (
-                    <div className="flex items-center justify-between gap-2 text-xs text-stone-300">
+                    <div className="flex items-center justify-between gap-2 text-xs text-ink-700">
                       <span>You didn&apos;t taste this one.</span>
                       <button
                         type="button"
                         onClick={() => setMyTasted(true)}
-                        className="underline text-champagne-gold font-semibold"
+                        className="underline text-wine-700 font-semibold"
                       >
                         Add your rating
                       </button>
                     </div>
                   )}
                   {partnerLine() && (
-                    <p className="text-xs text-stone-400 border-t border-white/10 pt-2">{partnerLine()}</p>
+                    <p className="text-xs text-ink-500 border-t border-linen-200 pt-2">{partnerLine()}</p>
                   )}
                 </div>
               )}
 
               {/* WHERE BOUGHT & PRICE */}
               <div className="p-4 rounded-2xl surface-card space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-champagne-200 flex items-center gap-1.5">
-                  <Store className="w-3.5 h-3.5 text-champagne-gold" />
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-wine-700 flex items-center gap-1.5">
+                  <Store className="w-3.5 h-3.5 text-wine-700" />
                   <span>Where {mode === 'wishlist' ? 'spotted' : 'you bought it'}</span>
                 </h3>
 
@@ -820,8 +820,8 @@ export function AddWineModal({
                           onClick={() => setStore(active ? '' : shop)}
                           className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${
                             active
-                              ? 'bg-wine-800/90 text-champagne-50 border-champagne-400/45 font-semibold'
-                              : 'bg-cellar-950/70 text-stone-300 border-white/10 hover:border-white/20'
+                              ? 'bg-wine-700 text-white border-wine-700 font-semibold'
+                              : 'bg-linen-50 text-ink-700 border-linen-200 hover:border-linen-300'
                           }`}
                         >
                           {shop}
@@ -850,10 +850,10 @@ export function AddWineModal({
                         value={currency}
                         onChange={(e) => setCurrency(e.target.value)}
                         aria-label="Currency"
-                        className="mt-1 px-2.5 py-2.5 rounded-l-xl bg-cellar-850 border border-r-0 border-white/10 text-sm text-champagne-200 font-semibold"
+                        className="mt-1 px-2.5 py-2.5 rounded-l-xl bg-linen-100 border border-r-0 border-linen-200 text-sm text-ink-900 font-semibold"
                       >
                         {['£', '$', '€', 'A$'].map((c) => (
-                          <option key={c} value={c} className="bg-cellar-900">
+                          <option key={c} value={c} className="bg-white text-ink-900">
                             {c}
                           </option>
                         ))}
@@ -888,27 +888,27 @@ export function AddWineModal({
                   type="button"
                   onClick={() => setShowMoreDetails((s) => !s)}
                   aria-expanded={showMoreDetails}
-                  className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left hover:bg-white/[0.02] transition-colors"
+                  className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left hover:bg-linen-50 transition-colors"
                 >
                   <div className="min-w-0">
-                    <span className="block text-xs font-semibold uppercase tracking-wider text-champagne-200">
+                    <span className="block text-xs font-semibold uppercase tracking-wider text-wine-700">
                       Bottle details, notes &amp; verdict
                     </span>
                     {!showMoreDetails && (
-                      <span className="block text-xs text-stone-400 truncate mt-0.5">
+                      <span className="block text-xs text-ink-500 truncate mt-0.5">
                         {scannedSummary || 'Producer, grape, region, shared notes, aromas'}
                       </span>
                     )}
                   </div>
                   <ChevronDown
-                    className={`w-4 h-4 text-champagne-400 flex-shrink-0 transition-transform ${
+                    className={`w-4 h-4 text-ink-500 flex-shrink-0 transition-transform ${
                       showMoreDetails ? 'rotate-180' : ''
                     }`}
                   />
                 </button>
 
                 {showMoreDetails && (
-                  <div className="px-4 pb-4 pt-2 border-t border-white/[0.07] space-y-4">
+                  <div className="px-4 pb-4 pt-3 border-t border-linen-100 space-y-4">
                     {/* Bottle metadata */}
                     <div className="grid grid-cols-2 gap-2.5">
                       <label className="col-span-2">
@@ -999,12 +999,12 @@ export function AddWineModal({
                                 setPickedVerdict(null);
                                 setUnpinVerdict(true);
                               }}
-                              className="text-xs underline text-champagne-gold"
+                              className="text-xs underline text-wine-700 font-medium"
                             >
                               Auto from swipes
                             </button>
                           ) : (
-                            <span className="text-[11px] text-stone-400">Follows your swipes</span>
+                            <span className="text-[11px] text-ink-500">Follows your swipes</span>
                           )}
                         </div>
                         <div className="grid grid-cols-2 gap-1.5">
@@ -1022,8 +1022,8 @@ export function AddWineModal({
                                   lastAlone ? 'col-span-2' : ''
                                 } ${
                                   isSelected
-                                    ? `${cfg.bgClass} ${cfg.colorClass} ${cfg.borderClass} ring-1 ring-champagne-gold/50 font-semibold`
-                                    : 'bg-cellar-950/70 border-white/10 text-stone-300 hover:border-white/20 font-medium'
+                                    ? `${cfg.bgClass} ${cfg.colorClass} ${cfg.borderClass} ring-1 ring-wine-600/30 font-semibold`
+                                    : 'bg-linen-50 border-linen-200 text-ink-700 hover:border-linen-300 font-medium'
                                 }`}
                               >
                                 {cfg.shortLabel}
@@ -1037,7 +1037,7 @@ export function AddWineModal({
                     {/* Aromas */}
                     <div className="space-y-1.5">
                       <span className={labelClass}>Aromas &amp; flavours</span>
-                      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-cellar-950/70 rounded-xl border border-white/[0.08]">
+                      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-linen-50 rounded-xl border border-linen-200">
                         {POPULAR_AROMAS.map((aroma) => {
                           const isSelected = selectedAromas.includes(aroma);
                           return (
@@ -1048,8 +1048,8 @@ export function AddWineModal({
                               aria-pressed={isSelected}
                               className={`px-2.5 py-1 rounded-lg text-xs transition-colors ${
                                 isSelected
-                                  ? 'bg-wine-800/90 text-champagne-50 border border-champagne-400/45 font-semibold'
-                                  : 'bg-cellar-900 text-stone-300 border border-white/[0.08] font-medium'
+                                  ? 'bg-wine-700 text-white border border-wine-700 font-semibold'
+                                  : 'bg-white text-ink-700 border border-linen-200 font-medium'
                               }`}
                             >
                               {isSelected ? '✓ ' : '+ '}
@@ -1067,9 +1067,9 @@ export function AddWineModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 modal-footer-safe border-t border-white/[0.08] bg-cellar-900 space-y-2">
+        <div className="p-4 modal-footer-safe border-t border-linen-200 bg-white space-y-2">
           {saveError && (
-            <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-400/25 rounded-xl p-2.5" role="alert">
+            <p className="text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-xl p-2.5" role="alert">
               {saveError}
             </p>
           )}
@@ -1093,7 +1093,7 @@ export function AddWineModal({
                   disabled={saving}
                   className="flex-1 py-3 px-4 rounded-xl btn-primary text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
                 >
-                  <Check className="w-4 h-4 text-champagne-gold" />
+                  <Check className="w-4 h-4" />
                   <span>
                     {saving
                       ? 'Saving…'
@@ -1120,7 +1120,7 @@ export function AddWineModal({
                 className="w-full py-3 px-4 rounded-xl btn-secondary text-sm font-semibold flex items-center justify-center gap-2"
               >
                 <span>{step === 'photo' ? 'Skip photo' : 'Skip, rate later'}</span>
-                <ChevronRight className="w-4 h-4 text-champagne-gold" />
+                <ChevronRight className="w-4 h-4 text-wine-700" />
               </button>
             )}
           </div>

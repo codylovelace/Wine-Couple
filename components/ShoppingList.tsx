@@ -94,31 +94,31 @@ export function ShoppingList({
     <div className="space-y-4">
       {/* Header */}
       <div className="px-0.5">
-        <h2 className="font-serif text-2xl font-semibold text-champagne-50 tracking-wide">
+        <h2 className="font-serif text-2xl font-semibold text-ink-900 tracking-wide">
           Aisle Guide
         </h2>
-        <p className="text-xs text-stone-400 mt-0.5">
+        <p className="text-xs text-ink-500 mt-0.5">
           Standing in the wine aisle? Check what to re-buy or skip.
         </p>
       </div>
 
       {/* Inline Search */}
       <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 pointer-events-none" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search wine, grape, or shop…"
           aria-label="Search aisle guide"
-          className="w-full pl-10 pr-9 py-2.5 text-sm field-input"
+          className="w-full pl-10 pr-9 py-2.5 text-sm field-input shadow-sm"
         />
         {searchQuery && (
           <button
             type="button"
             onClick={() => onSearchChange('')}
             aria-label="Clear search"
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-cellar-800 hover:bg-cellar-700 text-stone-300 hover:text-white flex items-center justify-center"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-linen-100 hover:bg-linen-200 text-ink-700 flex items-center justify-center"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -126,7 +126,7 @@ export function ShoppingList({
       </div>
 
       {/* Segmented Control */}
-      <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-cellar-900 border border-white/[0.08]" role="tablist">
+      <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-linen-100 border border-linen-200" role="tablist">
         {(
           [
             ['again', `At the Shop (${buyAgainCount})`],
@@ -141,8 +141,8 @@ export function ShoppingList({
             onClick={() => setView(id)}
             className={`py-2 rounded-xl text-xs font-semibold transition-all tabular-nums ${
               view === id
-                ? 'bg-wine-800 text-champagne-50 border border-champagne-400/35 shadow-sm'
-                : 'text-stone-400 hover:text-stone-200 border border-transparent'
+                ? 'bg-white text-wine-700 border border-linen-200 shadow-sm'
+                : 'text-ink-500 hover:text-ink-900 border border-transparent'
             }`}
           >
             {label}
@@ -153,7 +153,7 @@ export function ShoppingList({
       {view === 'again' ? (
         groups.length === 0 ? (
           <EmptyState
-            icon={<ShoppingBag className="w-7 h-7 text-champagne-400/50" />}
+            icon={<ShoppingBag className="w-7 h-7 text-wine-700/60" />}
             title="Your aisle guide is empty"
             text="Wines marked Buy Again, Great Value, or Avoid will group here by shop so you can check at a glance."
           />
@@ -167,8 +167,8 @@ export function ShoppingList({
                   onClick={() => setSelectedShop('all')}
                   className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap border transition-all ${
                     selectedShop === 'all'
-                      ? 'bg-wine-800/90 text-champagne-50 border-champagne-400/45 font-semibold'
-                      : 'bg-cellar-900 text-stone-300 border-white/[0.08] hover:border-white/20 font-medium'
+                      ? 'bg-wine-700 text-white border-wine-700 font-semibold shadow-sm'
+                      : 'bg-white text-ink-700 border-linen-200 hover:border-linen-300 font-medium'
                   }`}
                 >
                   All shops
@@ -180,13 +180,19 @@ export function ShoppingList({
                     onClick={() => setSelectedShop(g.shop)}
                     className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap border transition-all ${
                       selectedShop === g.shop
-                        ? 'bg-wine-800/90 text-champagne-50 border-champagne-400/45 font-semibold'
-                        : 'bg-cellar-900 text-stone-300 border-white/[0.08] hover:border-white/20 font-medium'
+                        ? 'bg-wine-700 text-white border-wine-700 font-semibold shadow-sm'
+                        : 'bg-white text-ink-700 border-linen-200 hover:border-linen-300 font-medium'
                     }`}
                   >
                     {g.shop}
                     {g.buyAgain.length > 0 && (
-                      <span className="ml-1.5 text-stone-400 tabular-nums">{g.buyAgain.length}</span>
+                      <span
+                        className={`ml-1.5 tabular-nums ${
+                          selectedShop === g.shop ? 'text-white/80' : 'text-ink-400'
+                        }`}
+                      >
+                        {g.buyAgain.length}
+                      </span>
                     )}
                   </button>
                 ))}
@@ -199,11 +205,11 @@ export function ShoppingList({
               return (
                 <section key={group.shop} className="surface-card rounded-2xl overflow-hidden">
                   {/* Shop Header */}
-                  <div className="px-4 py-3 bg-cellar-850/70 border-b border-white/[0.07] flex items-center justify-between gap-2">
+                  <div className="px-4 py-3 bg-linen-100/70 border-b border-linen-200 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <ShoppingBag className="w-4 h-4 text-champagne-gold flex-shrink-0" />
-                      <h3 className="text-sm font-semibold text-champagne-100 truncate">{group.shop}</h3>
-                      <span className="text-xs text-stone-400 whitespace-nowrap tabular-nums">
+                      <ShoppingBag className="w-4 h-4 text-wine-700 flex-shrink-0" />
+                      <h3 className="text-sm font-semibold text-ink-900 truncate">{group.shop}</h3>
+                      <span className="text-xs text-ink-500 whitespace-nowrap tabular-nums">
                         {group.buyAgain.length > 0
                           ? `${group.buyAgain.length} to re-buy`
                           : `${group.avoid.length} to avoid`}
@@ -213,7 +219,7 @@ export function ShoppingList({
                       <button
                         type="button"
                         onClick={() => onShopClick(group.shop)}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-champagne-300 hover:text-champagne-100 flex-shrink-0"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-wine-700 hover:text-wine-900 flex-shrink-0"
                       >
                         <span>All history</span>
                         <ChevronRight className="w-3.5 h-3.5" />
@@ -223,7 +229,7 @@ export function ShoppingList({
 
                   {/* Buy Again / Great Value Bottles */}
                   {group.buyAgain.length > 0 && (
-                    <ul className="divide-y divide-white/[0.07]">
+                    <ul className="divide-y divide-linen-100">
                       {group.buyAgain.map((w) => {
                         const { title, subtitle } = wineTitle(w);
                         const verdict = VERDICTS[w.coupleVerdict];
@@ -233,9 +239,9 @@ export function ShoppingList({
                             <button
                               type="button"
                               onClick={() => onOpen(w)}
-                              className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-white/[0.02] transition-colors"
+                              className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-linen-50 transition-colors"
                             >
-                              <div className="relative w-10 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-cellar-950 border border-white/[0.08] flex items-center justify-center">
+                              <div className="relative w-10 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-linen-100 border border-linen-200 flex items-center justify-center">
                                 <span
                                   aria-hidden="true"
                                   className={`absolute left-0 top-0 bottom-0 w-[2.5px] ${typeMeta.barClass}`}
@@ -243,14 +249,14 @@ export function ShoppingList({
                                 {w.imageUrl ? (
                                   <img src={w.imageUrl} alt={title} className="w-full h-full object-cover" loading="lazy" />
                                 ) : (
-                                  <WineIcon className="w-4 h-4 text-champagne-400/35" />
+                                  <WineIcon className="w-4 h-4 text-wine-400/45" />
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-serif text-lg font-semibold text-champagne-50 leading-tight truncate">
+                                <p className="font-serif text-lg font-semibold text-ink-900 leading-tight truncate">
                                   {title}
                                 </p>
-                                <p className="text-xs text-stone-400 truncate mt-0.5">
+                                <p className="text-xs text-ink-500 truncate mt-0.5">
                                   {[subtitle, w.vintage !== 'NV' ? w.vintage : '', typeMeta.label]
                                     .filter(Boolean)
                                     .join(' · ')}
@@ -258,7 +264,7 @@ export function ShoppingList({
                               </div>
                               <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                                 {w.purchase?.price > 0 && (
-                                  <span className="text-sm font-semibold text-champagne-200 tabular-nums">
+                                  <span className="text-sm font-semibold text-ink-900 tabular-nums">
                                     {w.purchase.currency}
                                     {Number(w.purchase.price).toFixed(2)}
                                   </span>
@@ -266,7 +272,7 @@ export function ShoppingList({
                                 <span className={`text-[11px] font-semibold ${verdict.colorClass}`}>
                                   {verdict.shortLabel}
                                   {w.averageRating > 0 && (
-                                    <span className="text-champagne-300 tabular-nums">
+                                    <span className="text-ink-700 tabular-nums">
                                       {' · '}
                                       <Star className="inline w-3 h-3 -mt-0.5 fill-champagne-gold text-champagne-gold" />{' '}
                                       {w.averageRating.toFixed(1)}
@@ -274,7 +280,7 @@ export function ShoppingList({
                                   )}
                                 </span>
                               </div>
-                              <ChevronRight className="w-4 h-4 text-stone-500 flex-shrink-0" />
+                              <ChevronRight className="w-4 h-4 text-ink-400 flex-shrink-0" />
                             </button>
                           </li>
                         );
@@ -284,16 +290,16 @@ export function ShoppingList({
 
                   {/* Collapsible Avoid Section */}
                   {group.avoid.length > 0 && (
-                    <div className="border-t border-rose-500/15 bg-rose-950/15">
+                    <div className="border-t border-rose-200/80 bg-rose-50/70">
                       {group.buyAgain.length > 0 && (
                         <button
                           type="button"
                           onClick={() => toggleAvoid(group.shop)}
                           aria-expanded={showAvoid}
-                          className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-medium text-rose-200/90 hover:text-rose-100"
+                          className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-semibold text-rose-800 hover:text-rose-950"
                         >
                           <span className="flex items-center gap-1.5">
-                            <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                            <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
                             <span>Avoid at {group.shop} ({group.avoid.length})</span>
                           </span>
                           <ChevronDown
@@ -302,7 +308,7 @@ export function ShoppingList({
                         </button>
                       )}
                       {showAvoid && (
-                        <ul className="divide-y divide-rose-500/10 border-t border-rose-500/10">
+                        <ul className="divide-y divide-rose-200/60 border-t border-rose-200/60">
                           {group.avoid.map((w) => {
                             const { title, subtitle } = wineTitle(w);
                             const snippet =
@@ -312,28 +318,28 @@ export function ShoppingList({
                                 <button
                                   type="button"
                                   onClick={() => onOpen(w)}
-                                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-rose-950/25 transition-colors"
+                                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-rose-100/50 transition-colors"
                                 >
-                                  <div className="w-8 h-11 flex-shrink-0 rounded-md overflow-hidden bg-cellar-950 border border-rose-400/20 flex items-center justify-center">
+                                  <div className="w-8 h-11 flex-shrink-0 rounded-md overflow-hidden bg-white border border-rose-200 flex items-center justify-center">
                                     {w.imageUrl ? (
-                                      <img src={w.imageUrl} alt={title} className="w-full h-full object-cover opacity-80" loading="lazy" />
+                                      <img src={w.imageUrl} alt={title} className="w-full h-full object-cover" loading="lazy" />
                                     ) : (
-                                      <WineIcon className="w-3.5 h-3.5 text-rose-300/50" />
+                                      <WineIcon className="w-3.5 h-3.5 text-rose-400" />
                                     )}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-rose-100 truncate">{title}</p>
-                                    <p className="text-xs text-stone-400 truncate">
+                                    <p className="text-sm font-semibold text-rose-950 truncate">{title}</p>
+                                    <p className="text-xs text-rose-800/80 truncate">
                                       {snippet || subtitle || 'Marked Avoid'}
                                     </p>
                                   </div>
                                   {w.purchase?.price > 0 && (
-                                    <span className="text-xs font-medium text-stone-300 tabular-nums flex-shrink-0">
+                                    <span className="text-xs font-semibold text-rose-900 tabular-nums flex-shrink-0">
                                       {w.purchase.currency}
                                       {Number(w.purchase.price).toFixed(2)}
                                     </span>
                                   )}
-                                  <ChevronRight className="w-3.5 h-3.5 text-stone-500 flex-shrink-0" />
+                                  <ChevronRight className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
                                 </button>
                               </li>
                             );
@@ -349,7 +355,7 @@ export function ShoppingList({
         )
       ) : toTry.length === 0 ? (
         <EmptyState
-          icon={<Bookmark className="w-7 h-7 text-champagne-400/50" />}
+          icon={<Bookmark className="w-7 h-7 text-wine-700/60" />}
           title="Nothing on your wishlist yet"
           text="Save bottles spotted in a shop, bookmark wines in Discover, or add one to try together later."
           action={{ label: 'Add bottle to try', onClick: onAddToWishlist }}
@@ -357,7 +363,7 @@ export function ShoppingList({
       ) : (
         <div className="space-y-3">
           <div className="flex items-center justify-between px-0.5">
-            <span className="text-xs text-stone-400 tabular-nums">
+            <span className="text-xs text-ink-500 tabular-nums">
               {toTry.length} saved {toTry.length === 1 ? 'bottle' : 'bottles'}
             </span>
             <button
@@ -365,7 +371,7 @@ export function ShoppingList({
               onClick={onAddToWishlist}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl btn-secondary text-xs font-semibold"
             >
-              <Plus className="w-3.5 h-3.5 text-champagne-gold" />
+              <Plus className="w-3.5 h-3.5 text-wine-700" />
               <span>Add bottle to try</span>
             </button>
           </div>
@@ -386,7 +392,7 @@ export function ShoppingList({
                     className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl btn-primary text-xs font-semibold"
                   >
                     <span>Log tasting</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-champagne-gold" />
+                    <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               )}
@@ -411,12 +417,12 @@ function EmptyState({
 }) {
   return (
     <div className="py-14 px-6 text-center space-y-3 surface-card rounded-2xl">
-      <div className="w-14 h-14 rounded-2xl bg-cellar-950 border border-white/10 flex items-center justify-center mx-auto">
+      <div className="w-14 h-14 rounded-2xl bg-linen-100 border border-linen-200 flex items-center justify-center mx-auto">
         {icon}
       </div>
       <div className="space-y-1">
-        <h3 className="font-serif text-xl font-semibold text-champagne-50">{title}</h3>
-        <p className="text-xs text-stone-400 max-w-xs mx-auto leading-relaxed">{text}</p>
+        <h3 className="font-serif text-xl font-semibold text-ink-900">{title}</h3>
+        <p className="text-xs text-ink-500 max-w-xs mx-auto leading-relaxed">{text}</p>
       </div>
       {action && (
         <button
@@ -424,7 +430,7 @@ function EmptyState({
           onClick={action.onClick}
           className="mt-2 px-4 py-2.5 rounded-xl btn-primary text-xs font-semibold inline-flex items-center gap-1.5"
         >
-          <Plus className="w-3.5 h-3.5 text-champagne-gold" />
+          <Plus className="w-3.5 h-3.5" />
           <span>{action.label}</span>
         </button>
       )}

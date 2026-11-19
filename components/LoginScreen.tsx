@@ -23,20 +23,20 @@ async function post(url: string, body: unknown): Promise<string | null> {
   }
 }
 
-const inputClass = 'w-full px-3.5 py-3 text-base field-input';
+const inputClass = 'w-full px-3.5 py-3 text-base field-input shadow-sm';
 
 export function LoginScreen({ mode, names }: LoginScreenProps) {
   return (
     <main className="flex-1 min-h-screen flex flex-col items-center justify-center px-4 py-10 font-sans">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center space-y-2.5">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-wine-950/90 border border-champagne-400/30 flex items-center justify-center shadow-lg">
-            <WineIcon className="w-6 h-6 text-champagne-gold" />
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-wine-50 border border-wine-200 flex items-center justify-center shadow-sm">
+            <WineIcon className="w-6 h-6 text-wine-700" />
           </div>
-          <h1 className="font-serif font-bold text-3xl tracking-[0.22em] gold-text-shimmer uppercase">
+          <h1 className="font-serif font-bold text-3xl tracking-[0.22em] text-ink-900 uppercase">
             Vino
           </h1>
-          <p className="text-sm text-stone-300">
+          <p className="text-sm text-ink-500">
             {mode === 'setup' ? 'Set up your two accounts to get started.' : 'Who’s tasting tonight?'}
           </p>
         </div>
@@ -82,20 +82,20 @@ function LoginForm({ names }: { names: string[] }) {
               aria-pressed={active}
               className={`p-4 rounded-2xl border flex flex-col items-center gap-2.5 transition-all ${
                 active
-                  ? 'surface-highlight border-champagne-400/60 shadow-gold-glow'
-                  : 'surface-card hover:border-white/20'
+                  ? 'bg-wine-50/70 border-wine-600 ring-2 ring-wine-600/15 shadow-sm'
+                  : 'surface-card hover:border-linen-300'
               }`}
             >
               <span
                 className={`w-12 h-12 rounded-full border text-lg font-bold flex items-center justify-center transition-colors ${
                   active
-                    ? 'bg-wine-800 border-champagne-400/50 text-champagne-50'
-                    : 'bg-cellar-950 border-white/10 text-champagne-200'
+                    ? 'bg-wine-700 border-wine-700 text-white'
+                    : 'bg-linen-100 border-linen-200 text-wine-700'
                 }`}
               >
                 {n.charAt(0).toUpperCase()}
               </span>
-              <span className="text-sm font-semibold text-stone-100 truncate max-w-full">{n}</span>
+              <span className="text-sm font-semibold text-ink-900 truncate max-w-full">{n}</span>
             </button>
           );
         })}
@@ -104,7 +104,7 @@ function LoginForm({ names }: { names: string[] }) {
       {name && (
         <div className="space-y-3 animate-fadeIn">
           <label className="block space-y-1.5">
-            <span className="text-xs text-stone-300 font-medium">{name}’s password</span>
+            <span className="text-xs text-ink-700 font-medium">{name}’s password</span>
             <input
               type="password"
               autoComplete="current-password"
@@ -117,7 +117,7 @@ function LoginForm({ names }: { names: string[] }) {
           {/* Lets password managers save the right name with the password. */}
           <input type="text" name="username" autoComplete="username" value={name} readOnly hidden />
           {error && (
-            <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-400/25 rounded-xl p-2.5" role="alert">
+            <p className="text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-xl p-2.5" role="alert">
               {error}
             </p>
           )}
@@ -126,10 +126,10 @@ function LoginForm({ names }: { names: string[] }) {
             disabled={busy || !password}
             className="w-full py-3 rounded-xl btn-primary text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <Lock className="w-4 h-4 text-champagne-gold" />
+            <Lock className="w-4 h-4" />
             <span>{busy ? 'Signing in…' : 'Sign in'}</span>
           </button>
-          <p className="text-xs text-stone-400 text-center">
+          <p className="text-xs text-ink-500 text-center">
             Forgotten it? Your partner can reset it from Settings.
           </p>
         </div>
@@ -168,7 +168,7 @@ function SetupForm({ suggested }: { suggested: string[] }) {
       {people.map((p, i) => (
         <div key={i} className="p-4 rounded-2xl surface-card space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-champagne-300">
+            <span className="text-xs font-semibold uppercase tracking-wider text-wine-700">
               {i === 0 ? 'First person' : 'Second person'}
             </span>
             <button
@@ -177,16 +177,16 @@ function SetupForm({ suggested }: { suggested: string[] }) {
               aria-pressed={me === i}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors ${
                 me === i
-                  ? 'bg-wine-800/90 text-champagne-50 border-champagne-400/45'
-                  : 'bg-cellar-950 text-stone-300 border-white/10'
+                  ? 'bg-wine-700 text-white border-wine-700'
+                  : 'bg-linen-50 text-ink-700 border-linen-200'
               }`}
             >
-              {me === i && <Check className="w-3.5 h-3.5 text-champagne-gold" />}
+              {me === i && <Check className="w-3.5 h-3.5" />}
               <span>This is me</span>
             </button>
           </div>
           <label className="block space-y-1.5">
-            <span className="text-xs text-stone-300 font-medium">Name</span>
+            <span className="text-xs text-ink-700 font-medium">Name</span>
             <input
               type="text"
               autoComplete={me === i ? 'username' : 'off'}
@@ -196,7 +196,7 @@ function SetupForm({ suggested }: { suggested: string[] }) {
             />
           </label>
           <label className="block space-y-1.5">
-            <span className="text-xs text-stone-300 font-medium">Password (at least 8 characters)</span>
+            <span className="text-xs text-ink-700 font-medium">Password (at least 8 characters)</span>
             <input
               type="password"
               autoComplete={me === i ? 'new-password' : 'off'}
@@ -207,12 +207,12 @@ function SetupForm({ suggested }: { suggested: string[] }) {
           </label>
         </div>
       ))}
-      <p className="text-xs text-stone-400 leading-relaxed">
+      <p className="text-xs text-ink-500 leading-relaxed">
         Names already in your cellar are filled in, so each person keeps their own past ratings. Either of you can
         change your password later in Settings.
       </p>
       {error && (
-        <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-400/25 rounded-xl p-2.5" role="alert">
+        <p className="text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-xl p-2.5" role="alert">
           {error}
         </p>
       )}

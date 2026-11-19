@@ -68,21 +68,21 @@ export function FilterBar({
     <div className="space-y-3">
       {/* Always-visible Search Input */}
       <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 pointer-events-none" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search wine, producer, grape, region, or shop…"
           aria-label="Search cellar"
-          className="w-full pl-10 pr-9 py-2.5 text-sm field-input"
+          className="w-full pl-10 pr-9 py-2.5 text-sm field-input shadow-sm"
         />
         {searchQuery && (
           <button
             type="button"
             onClick={() => onSearchChange('')}
             aria-label="Clear search"
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-cellar-800 hover:bg-cellar-700 text-stone-300 hover:text-white flex items-center justify-center"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-linen-100 hover:bg-linen-200 text-ink-700 flex items-center justify-center"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -102,16 +102,22 @@ export function FilterBar({
               aria-pressed={isSelected}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs whitespace-nowrap font-sans transition-all border ${
                 isSelected
-                  ? 'bg-wine-800/90 text-champagne-50 border-champagne-400/45 font-semibold shadow-sm'
-                  : 'bg-cellar-900 text-stone-300 border-white/[0.08] hover:border-white/20 hover:text-white font-medium'
+                  ? 'bg-wine-700 text-white border-wine-700 font-semibold shadow-sm'
+                  : 'bg-white text-ink-700 border-linen-200 hover:border-linen-300 font-medium'
               }`}
             >
-              {opt.dotClass && <span className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.dotClass}`} />}
+              {opt.dotClass && (
+                <span
+                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    isSelected ? 'bg-white/90' : opt.dotClass
+                  }`}
+                />
+              )}
               <span>{opt.label}</span>
               {count > 0 && (
                 <span
                   className={`text-[11px] px-1.5 py-0.2 rounded-full tabular-nums ${
-                    isSelected ? 'bg-black/35 text-champagne-100' : 'text-stone-400'
+                    isSelected ? 'bg-black/20 text-white' : 'text-ink-500'
                   }`}
                 >
                   {count}
@@ -134,8 +140,8 @@ export function FilterBar({
               aria-pressed={isSelected}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs whitespace-nowrap font-sans transition-all border ${
                 isSelected
-                  ? 'bg-cellar-800 text-champagne-100 border-champagne-400/35 font-semibold'
-                  : 'bg-transparent text-stone-400 border-transparent hover:text-stone-200 hover:bg-cellar-900 font-medium'
+                  ? 'bg-linen-100 text-wine-800 border-wine-300 font-semibold'
+                  : 'bg-transparent text-ink-500 border-transparent hover:text-ink-900 hover:bg-linen-100/70 font-medium'
               }`}
             >
               {opt.dotClass && <span className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.dotClass}`} />}
@@ -146,17 +152,17 @@ export function FilterBar({
       </div>
 
       {/* Results Count, Shop Filter, Sort & Reset */}
-      <div className="flex items-center justify-between gap-2 pt-0.5 text-xs text-stone-300">
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5 text-sm text-ink-700">
         <div className="flex items-center gap-2.5">
-          <span className="tabular-nums">
-            <strong className="text-stone-100 font-semibold">{totalFiltered}</strong>{' '}
+          <span className="tabular-nums text-xs sm:text-sm">
+            <strong className="text-ink-900 font-semibold">{totalFiltered}</strong>{' '}
             {totalFiltered === 1 ? 'bottle' : 'bottles'}
           </span>
           {filtersActive && (
             <button
               type="button"
               onClick={onResetFilters}
-              className="inline-flex items-center gap-1 text-champagne-300 hover:text-champagne-100 font-medium underline underline-offset-2"
+              className="inline-flex items-center gap-1 text-xs text-wine-700 hover:text-wine-900 font-semibold underline underline-offset-2"
             >
               <RotateCcw className="w-3 h-3" />
               <span>Reset</span>
@@ -164,21 +170,21 @@ export function FilterBar({
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {shops.length > 0 && (
-            <label className="flex items-center gap-1 text-stone-300">
-              <Store className="w-3.5 h-3.5 text-champagne-400/80 flex-shrink-0" />
+            <label className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-linen-200 text-ink-900 shadow-sm">
+              <Store className="w-3.5 h-3.5 text-wine-700 flex-shrink-0" />
               <span className="sr-only">Filter by shop</span>
               <select
                 value={activeShop}
                 onChange={(e) => onSelectShop(e.target.value)}
-                className="bg-transparent text-stone-200 font-medium focus:outline-none cursor-pointer max-w-[115px] truncate"
+                className="bg-transparent text-xs font-medium text-ink-900 focus:outline-none cursor-pointer max-w-[115px] truncate"
               >
-                <option value="all" className="bg-cellar-900">
+                <option value="all" className="bg-white text-ink-900">
                   All shops
                 </option>
                 {shops.map((s) => (
-                  <option key={s} value={s} className="bg-cellar-900">
+                  <option key={s} value={s} className="bg-white text-ink-900">
                     {s}
                   </option>
                 ))}
@@ -186,24 +192,24 @@ export function FilterBar({
             </label>
           )}
 
-          <label className="flex items-center gap-1 text-stone-300">
-            <ArrowUpDown className="w-3.5 h-3.5 text-champagne-400/80 flex-shrink-0" />
+          <label className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-linen-200 text-ink-900 shadow-sm">
+            <ArrowUpDown className="w-3.5 h-3.5 text-wine-700 flex-shrink-0" />
             <span className="sr-only">Sort by</span>
             <select
               value={sortBy}
               onChange={(e) => onSortChange(e.target.value as SortOption)}
-              className="bg-transparent text-stone-200 font-medium focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs font-medium text-ink-900 focus:outline-none cursor-pointer"
             >
-              <option value="newest" className="bg-cellar-900">
+              <option value="newest" className="bg-white text-ink-900">
                 Newest
               </option>
-              <option value="rating" className="bg-cellar-900">
+              <option value="rating" className="bg-white text-ink-900">
                 Top rated
               </option>
-              <option value="price-low" className="bg-cellar-900">
+              <option value="price-low" className="bg-white text-ink-900">
                 Price: low
               </option>
-              <option value="price-high" className="bg-cellar-900">
+              <option value="price-high" className="bg-white text-ink-900">
                 Price: high
               </option>
             </select>

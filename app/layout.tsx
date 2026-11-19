@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
     title: 'Vino Cellar',
   },
   formatDetection: {
@@ -20,7 +20,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#0c0a09',
+  themeColor: '#faf7f2',
 };
 
 export default function RootLayout({
@@ -29,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -41,7 +41,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className="bg-cellar-950 text-stone-100 antialiased selection:bg-wine-700 selection:text-champagne-50 min-h-screen">
+      <body className="bg-linen-50 text-ink-900 antialiased selection:bg-wine-700 selection:text-white min-h-screen">
         <main className="w-full max-w-2xl mx-auto min-h-screen relative flex flex-col">
           {children}
         </main>

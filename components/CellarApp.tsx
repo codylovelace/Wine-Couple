@@ -308,7 +308,7 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
 
       <main className="flex-1 px-4 py-4 space-y-4 font-sans pb-28">
         {loadError && (
-          <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-400/35 text-xs text-rose-100 flex items-center justify-between gap-3">
+          <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center justify-between gap-3">
             <span>{loadError}</span>
             <button type="button" onClick={loadWines} className="underline font-semibold flex-shrink-0">
               Retry
@@ -352,38 +352,38 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
               <button
                 type="button"
                 onClick={() => setRateSession({ queue: myTurn, startAtSummary: false })}
-                className="w-full p-4 rounded-2xl surface-highlight flex items-center justify-between gap-3 text-left transition-all hover:border-champagne-400/50 active:scale-[0.99]"
+                className="w-full p-4 rounded-2xl surface-highlight flex items-center justify-between gap-3 text-left transition-all hover:border-wine-300 active:scale-[0.99]"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="flex items-center -space-x-2 flex-shrink-0">
                     {myTurn.slice(0, 3).map((w) => (
                       <div
                         key={w.id}
-                        className="w-10 h-12 rounded-lg overflow-hidden bg-cellar-950 border border-champagne-400/35 flex items-center justify-center shadow-md"
+                        className="w-10 h-12 rounded-lg overflow-hidden bg-white border border-wine-200 flex items-center justify-center shadow-sm"
                       >
                         {w.imageUrl ? (
                           <img src={w.imageUrl} alt={w.name} className="w-full h-full object-cover" />
                         ) : (
-                          <Heart className="w-4 h-4 text-champagne-gold" />
+                          <Heart className="w-4 h-4 text-wine-700" />
                         )}
                       </div>
                     ))}
                   </div>
                   <div className="min-w-0">
-                    <span className="inline-block text-[11px] font-semibold uppercase tracking-wider text-champagne-gold">
+                    <span className="inline-block text-[11px] font-semibold uppercase tracking-wider text-wine-700">
                       Awaiting your verdict
                     </span>
-                    <span className="block font-serif text-lg font-semibold text-champagne-50 leading-tight truncate">
+                    <span className="block font-serif text-lg font-semibold text-ink-900 leading-tight truncate">
                       {myTurn.length === 1
                         ? `Rate ${myTurn[0].name}`
                         : `${myTurn.length} bottles ready to swipe`}
                     </span>
-                    <span className="block text-xs text-stone-300 truncate mt-0.5">
+                    <span className="block text-xs text-ink-500 truncate mt-0.5">
                       {partner ? `${partner.name} logged` : 'Logged'} · Tap to swipe &amp; reveal
                     </span>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-champagne-300 flex-shrink-0" />
+                <ChevronRight className="w-5 h-5 text-wine-700 flex-shrink-0" />
               </button>
             )}
 
@@ -396,22 +396,22 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
                       id: 'loved-it',
                       label: 'Buy Again',
                       count: verdictCounts['loved-it'] ?? 0,
-                      dotClass: 'bg-emerald-400',
-                      activeClass: 'bg-emerald-500/15 border-emerald-400/40 text-emerald-200',
+                      dotClass: 'bg-emerald-600',
+                      activeClass: 'bg-emerald-50 border-emerald-300 text-emerald-900 shadow-sm',
                     },
                     {
                       id: 'good-value',
                       label: 'Great Value',
                       count: verdictCounts['good-value'] ?? 0,
-                      dotClass: 'bg-sky-400',
-                      activeClass: 'bg-sky-500/15 border-sky-400/40 text-sky-200',
+                      dotClass: 'bg-sky-600',
+                      activeClass: 'bg-sky-50 border-sky-300 text-sky-900 shadow-sm',
                     },
                     {
                       id: 'bad',
                       label: 'Avoid',
                       count: verdictCounts['bad'] ?? 0,
-                      dotClass: 'bg-rose-400',
-                      activeClass: 'bg-rose-500/15 border-rose-400/40 text-rose-200',
+                      dotClass: 'bg-rose-600',
+                      activeClass: 'bg-rose-50 border-rose-300 text-rose-900 shadow-sm',
                     },
                   ] as const
                 ).map((item) => {
@@ -425,10 +425,10 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
                       className={`px-3 py-2.5 rounded-2xl border text-left transition-all ${
                         selected
                           ? item.activeClass
-                          : 'surface-card hover:border-white/20 text-stone-200'
+                          : 'surface-card hover:border-linen-300 text-ink-900'
                       }`}
                     >
-                      <span className="flex items-center gap-1.5 text-[11px] font-medium text-stone-400">
+                      <span className="flex items-center gap-1.5 text-[11px] font-medium text-ink-500">
                         <span className={`w-1.5 h-1.5 rounded-full ${item.dotClass}`} />
                         <span className="truncate">{item.label}</span>
                       </span>
@@ -467,12 +467,12 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
                     key={i}
                     className="surface-card rounded-2xl p-3.5 flex gap-3.5 animate-pulse"
                   >
-                    <div className="w-20 h-[108px] rounded-xl bg-cellar-850 flex-shrink-0" />
+                    <div className="w-20 h-[108px] rounded-xl bg-linen-200/70 flex-shrink-0" />
                     <div className="flex-1 space-y-2.5 py-1">
-                      <div className="h-4 w-20 rounded-full bg-cellar-850" />
-                      <div className="h-5 w-3/4 rounded-lg bg-cellar-850" />
-                      <div className="h-3.5 w-1/2 rounded-lg bg-cellar-850" />
-                      <div className="h-3.5 w-2/3 rounded-lg bg-cellar-850 mt-4" />
+                      <div className="h-4 w-20 rounded-full bg-linen-200/70" />
+                      <div className="h-5 w-3/4 rounded-lg bg-linen-200/70" />
+                      <div className="h-3.5 w-1/2 rounded-lg bg-linen-200/70" />
+                      <div className="h-3.5 w-2/3 rounded-lg bg-linen-200/70 mt-4" />
                     </div>
                   </div>
                 ))}
@@ -493,14 +493,14 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
               </div>
             ) : (
               <div className="py-16 text-center space-y-4 px-6 surface-card rounded-2xl">
-                <div className="w-14 h-14 rounded-2xl bg-cellar-950 border border-white/10 flex items-center justify-center mx-auto">
-                  <WineIcon className="w-6 h-6 text-champagne-400/50" />
+                <div className="w-14 h-14 rounded-2xl bg-linen-100 border border-linen-200 flex items-center justify-center mx-auto">
+                  <WineIcon className="w-6 h-6 text-wine-700/60" />
                 </div>
                 <div>
-                  <h3 className="font-serif text-xl font-semibold text-champagne-50">
+                  <h3 className="font-serif text-xl font-semibold text-ink-900">
                     {filtersActive ? 'No bottles match' : 'Your cellar is empty'}
                   </h3>
-                  <p className="text-xs text-stone-400 mt-1 max-w-xs mx-auto leading-relaxed">
+                  <p className="text-xs text-ink-500 mt-1 max-w-xs mx-auto leading-relaxed">
                     {filtersActive
                       ? 'Try clearing your search or filters to see all bottles.'
                       : 'Snap your first bottle to start building your shared wine cellar.'}
@@ -520,7 +520,7 @@ export function CellarApp({ me: initialMe, partner }: CellarAppProps) {
                     onClick={() => openAdd({ mode: 'tasted' })}
                     className="px-5 py-2.5 rounded-xl btn-primary text-xs font-semibold inline-flex items-center gap-2"
                   >
-                    <Plus className="w-4 h-4 text-champagne-gold" />
+                    <Plus className="w-4 h-4" />
                     <span>Log first bottle</span>
                   </button>
                 )}

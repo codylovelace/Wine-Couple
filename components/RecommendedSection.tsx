@@ -96,28 +96,28 @@ export function RecommendedSection({
     <div className="space-y-4 font-sans">
       {/* Editorial Sommelier Hero */}
       <div className="surface-highlight p-5 rounded-2xl space-y-2.5 relative overflow-hidden">
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cellar-950/70 text-champagne-200 border border-champagne-400/25 text-[11px] font-semibold tracking-wider uppercase">
-          <Sparkles className="w-3.5 h-3.5 text-champagne-gold" />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white text-wine-700 border border-wine-200 text-[11px] font-semibold tracking-wider uppercase shadow-sm">
+          <Sparkles className="w-3.5 h-3.5 text-wine-700" />
           <span>Curated for {names}</span>
         </span>
-        <h2 className="font-serif text-2xl font-semibold text-champagne-50 leading-tight">
+        <h2 className="font-serif text-2xl font-semibold text-ink-900 leading-tight">
           Wines you might both love
         </h2>
-        <p className="text-xs text-stone-300 leading-relaxed">
+        <p className="text-xs text-ink-700 leading-relaxed">
           Picked by Gemini from the{' '}
-          <strong className="text-champagne-100 tabular-nums">{status?.bothLikedCount ?? 0}</strong>{' '}
+          <strong className="text-ink-900 tabular-nums">{status?.bothLikedCount ?? 0}</strong>{' '}
           bottle{status?.bothLikedCount === 1 ? '' : 's'} you both rated Buy Again, steering clear of styles you passed on.
         </p>
         {set && (
-          <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-white/[0.08]">
-            <span className="text-[11px] text-stone-400">Updated {timeAgo(set.generatedAt)}</span>
+          <div className="flex items-center justify-between gap-2 pt-2 border-t border-wine-200/60">
+            <span className="text-[11px] text-ink-500">Updated {timeAgo(set.generatedAt)}</span>
             <button
               type="button"
               onClick={generate}
               disabled={generating}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl btn-secondary text-xs font-semibold disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-linen-100 border border-linen-200 text-xs font-semibold text-ink-900 shadow-sm disabled:opacity-50"
             >
-              <RefreshCw className={`w-3.5 h-3.5 text-champagne-gold ${generating ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 text-wine-700 ${generating ? 'animate-spin' : ''}`} />
               {generating ? 'Thinking…' : 'Refresh picks'}
             </button>
           </div>
@@ -135,10 +135,10 @@ export function RecommendedSection({
       )}
 
       {error && (
-        <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-400/30 text-xs text-rose-100 space-y-2">
+        <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-2">
           <p>{error}</p>
           {/key/i.test(error) && (
-            <button type="button" onClick={onOpenSettings} className="underline font-semibold text-champagne-200">
+            <button type="button" onClick={onOpenSettings} className="underline font-semibold text-wine-700">
               Open Settings
             </button>
           )}
@@ -147,8 +147,8 @@ export function RecommendedSection({
 
       {loading ? (
         <div className="py-16 text-center space-y-2">
-          <Sparkles className="w-7 h-7 text-champagne-400/40 animate-pulse mx-auto" />
-          <p className="text-xs text-stone-400">Loading suggestions…</p>
+          <Sparkles className="w-7 h-7 text-wine-400 animate-pulse mx-auto" />
+          <p className="text-xs text-ink-500">Loading suggestions…</p>
         </div>
       ) : status && !status.hasKey && !set ? (
         <EmptyState
@@ -180,43 +180,43 @@ export function RecommendedSection({
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 mb-1">
                       <span className={`w-2 h-2 rounded-full ${typeMeta.dotClass}`} />
-                      <span className="text-[11px] font-medium text-stone-400 uppercase tracking-wider">
+                      <span className="text-[11px] font-medium text-ink-500 uppercase tracking-wider">
                         {typeMeta.label}
                       </span>
                     </div>
-                    <h3 className="font-serif text-2xl text-champagne-50 font-semibold leading-tight">
+                    <h3 className="font-serif text-2xl text-ink-900 font-semibold leading-tight">
                       {rec.name}
                     </h3>
                     {rec.producer && (
-                      <p className="text-xs text-champagne-300/90 font-medium mt-0.5">{rec.producer}</p>
+                      <p className="text-xs text-wine-700 font-medium mt-0.5">{rec.producer}</p>
                     )}
                   </div>
                   {rec.estimatedPrice > 0 && (
-                    <span className="px-2.5 py-1 rounded-lg bg-cellar-950 border border-white/[0.08] text-xs font-semibold text-champagne-200 flex-shrink-0 tabular-nums">
+                    <span className="px-2.5 py-1 rounded-lg bg-linen-100 border border-linen-200 text-xs font-semibold text-ink-900 flex-shrink-0 tabular-nums">
                       ~{rec.currency}
                       {rec.estimatedPrice.toFixed(2)}
                     </span>
                   )}
                 </div>
 
-                <p className="flex items-center gap-1.5 text-xs text-stone-400 pl-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-stone-500 flex-shrink-0" />
+                <p className="flex items-center gap-1.5 text-xs text-ink-500 pl-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-ink-400 flex-shrink-0" />
                   <span>{[rec.grape, rec.region, rec.country].filter(Boolean).join(' · ')}</span>
                 </p>
 
                 {rec.reason && (
-                  <blockquote className="ml-1.5 p-3 rounded-xl bg-cellar-950/75 border-l-2 border-l-champagne-gold/75 text-xs text-stone-200 leading-relaxed">
+                  <blockquote className="ml-1.5 p-3 rounded-xl bg-linen-50 border-l-2 border-l-wine-600 text-xs text-ink-700 leading-relaxed">
                     {rec.reason}
                   </blockquote>
                 )}
 
                 {rec.basedOn.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1.5 pl-1.5">
-                    <span className="text-[11px] text-stone-400">Inspired by</span>
+                    <span className="text-[11px] text-ink-500">Inspired by</span>
                     {rec.basedOn.map((b) => (
                       <span
                         key={b}
-                        className="px-2 py-0.5 rounded-md bg-cellar-850 border border-white/[0.07] text-[11px] text-champagne-200"
+                        className="px-2 py-0.5 rounded-md bg-linen-100 border border-linen-200 text-[11px] text-ink-900 font-medium"
                       >
                         {b}
                       </span>
@@ -237,26 +237,26 @@ export function RecommendedSection({
                         href={href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-2.5 py-1.5 rounded-lg bg-cellar-950/80 border border-white/[0.08] hover:border-white/20 text-[11px] text-stone-200 flex items-center gap-1 transition-colors"
+                        className="px-2.5 py-1.5 rounded-lg bg-linen-50 border border-linen-200 hover:border-linen-300 text-[11px] text-ink-900 font-medium flex items-center gap-1 transition-colors"
                       >
                         <span>{label}</span>
-                        <ExternalLink className="w-3 h-3 text-stone-400" />
+                        <ExternalLink className="w-3 h-3 text-ink-400" />
                       </a>
                     ))}
                 </div>
 
-                <div className="pt-2.5 border-t border-white/[0.07] grid grid-cols-2 gap-2 pl-1.5">
+                <div className="pt-2.5 border-t border-linen-100 grid grid-cols-2 gap-2 pl-1.5">
                   <button
                     type="button"
                     onClick={() => onAddToWishlist(rec)}
                     aria-pressed={isWishlisted}
                     className={`py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border transition-colors ${
                       isWishlisted
-                        ? 'bg-wine-800/80 text-champagne-100 border-champagne-400/40'
+                        ? 'bg-wine-50 text-wine-800 border-wine-300'
                         : 'btn-secondary'
                     }`}
                   >
-                    <Bookmark className={`w-3.5 h-3.5 ${isWishlisted ? 'fill-champagne-gold text-champagne-gold' : ''}`} />
+                    <Bookmark className={`w-3.5 h-3.5 ${isWishlisted ? 'fill-wine-700 text-wine-700' : ''}`} />
                     <span>{isWishlisted ? 'Saved to Try' : 'Save to Try'}</span>
                   </button>
                   <button
@@ -264,7 +264,7 @@ export function RecommendedSection({
                     onClick={() => onLogAsTasted(rec)}
                     className="py-2.5 rounded-xl btn-primary text-xs font-semibold flex items-center justify-center gap-1.5"
                   >
-                    <Plus className="w-3.5 h-3.5 text-champagne-gold" />
+                    <Plus className="w-3.5 h-3.5" />
                     <span>We Tried It</span>
                   </button>
                 </div>
@@ -288,12 +288,12 @@ function EmptyState({
 }) {
   return (
     <div className="py-14 px-6 text-center space-y-3 surface-card rounded-2xl">
-      <div className="w-14 h-14 rounded-2xl bg-cellar-950 border border-white/10 flex items-center justify-center mx-auto">
-        <Sparkles className="w-6 h-6 text-champagne-400/50" />
+      <div className="w-14 h-14 rounded-2xl bg-linen-100 border border-linen-200 flex items-center justify-center mx-auto">
+        <Sparkles className="w-6 h-6 text-wine-700/60" />
       </div>
       <div className="space-y-1">
-        <h3 className="font-serif text-xl font-semibold text-champagne-50">{title}</h3>
-        <p className="text-xs text-stone-400 max-w-xs mx-auto leading-relaxed">{text}</p>
+        <h3 className="font-serif text-xl font-semibold text-ink-900">{title}</h3>
+        <p className="text-xs text-ink-500 max-w-xs mx-auto leading-relaxed">{text}</p>
       </div>
       {action && (
         <button

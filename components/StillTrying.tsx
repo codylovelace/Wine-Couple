@@ -14,15 +14,15 @@ interface StillTryingProps {
 export function StillTrying({ label, attempt, onCancel }: StillTryingProps) {
   return (
     <div className="space-y-2.5" role="status" aria-live="polite">
-      <div className="h-1.5 rounded-full bg-cellar-950 border border-white/[0.06] overflow-hidden">
-        <div className="h-full w-2/5 rounded-full bg-gradient-to-r from-wine-600 to-champagne-gold animate-indeterminate" />
+      <div className="h-1.5 rounded-full bg-linen-200 overflow-hidden">
+        <div className="h-full w-2/5 rounded-full bg-gradient-to-r from-wine-700 to-champagne-500 animate-indeterminate" />
       </div>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-stone-200 leading-snug">
+        <p className="text-xs text-ink-700 leading-snug">
           {attempt > 1 ? (
             <>
               Gemini is busy, still trying
-              <span className="text-stone-400 tabular-nums"> (attempt {attempt})</span>
+              <span className="text-ink-500 tabular-nums"> (attempt {attempt})</span>
             </>
           ) : (
             `${label}…`

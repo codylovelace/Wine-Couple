@@ -19,7 +19,7 @@ interface SettingsModalProps {
 
 const inputClass = 'w-full px-3 py-2.5 text-sm field-input';
 const cardClass = 'p-4 rounded-2xl surface-card space-y-3';
-const titleClass = 'text-xs font-semibold uppercase tracking-wider text-champagne-300 flex items-center gap-1.5';
+const titleClass = 'text-xs font-semibold uppercase tracking-wider text-wine-700 flex items-center gap-1.5';
 const buttonClass = 'px-4 py-2.5 rounded-xl btn-secondary text-sm font-semibold disabled:opacity-50';
 
 // A small form section with its own saving state and message.
@@ -38,7 +38,7 @@ function useAction() {
     }
   };
   const view = message && (
-    <p className={`text-xs ${message.ok ? 'text-emerald-300' : 'text-rose-300'}`} role={message.ok ? 'status' : 'alert'}>
+    <p className={`text-xs font-medium ${message.ok ? 'text-emerald-700' : 'text-rose-700'}`} role={message.ok ? 'status' : 'alert'}>
       {message.text}
     </p>
   );
@@ -123,20 +123,20 @@ export function SettingsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-ink-900/45 backdrop-blur-sm animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md max-h-[92dvh] bg-cellar-900 border border-white/10 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
+        className="w-full max-w-md max-h-[92dvh] bg-linen-50 border border-linen-200 rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
-          <h2 className="font-serif font-semibold text-xl text-champagne-50">Settings</h2>
+        <div className="p-4 bg-white border-b border-linen-200 flex items-center justify-between">
+          <h2 className="font-serif font-semibold text-xl text-ink-900">Settings</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="w-9 h-9 rounded-full bg-cellar-800 hover:bg-cellar-700 text-stone-300 hover:text-white flex items-center justify-center border border-white/10"
+            className="w-9 h-9 rounded-full bg-linen-100 hover:bg-linen-200 text-ink-700 flex items-center justify-center border border-linen-200"
           >
             <X className="w-4 h-4" />
           </button>
@@ -146,7 +146,7 @@ export function SettingsModal({
           {/* Your account */}
           <section className={cardClass}>
             <h3 className={titleClass}>
-              <User className="w-3.5 h-3.5 text-champagne-gold" />
+              <User className="w-3.5 h-3.5 text-wine-700" />
               <span>Your account</span>
             </h3>
             <form
@@ -164,7 +164,7 @@ export function SettingsModal({
               }}
             >
               <label className="block space-y-1">
-                <span className="text-xs text-stone-400">Your name (also what you sign in with)</span>
+                <span className="text-xs text-ink-500">Your name (also what you sign in with)</span>
                 <div className="flex gap-2">
                   <input
                     value={name}
@@ -185,7 +185,7 @@ export function SettingsModal({
             </form>
 
             <form
-              className="space-y-2 pt-3 border-t border-white/[0.07]"
+              className="space-y-2 pt-3 border-t border-linen-100"
               onSubmit={(e) => {
                 e.preventDefault();
                 passwordAction.run(async () => {
@@ -199,8 +199,8 @@ export function SettingsModal({
                 });
               }}
             >
-              <span className="text-xs text-stone-300 flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-stone-400" /> Change your password
+              <span className="text-xs text-ink-700 flex items-center gap-1.5 font-medium">
+                <Lock className="w-3.5 h-3.5 text-ink-400" /> Change your password
               </span>
               <input
                 type="password"
@@ -233,7 +233,7 @@ export function SettingsModal({
               onClick={signOut}
               className={`${buttonClass} w-full flex items-center justify-center gap-2`}
             >
-              <LogOut className="w-4 h-4 text-stone-400" /> Sign out
+              <LogOut className="w-4 h-4 text-ink-500" /> Sign out
             </button>
           </section>
 
@@ -241,7 +241,7 @@ export function SettingsModal({
           {partner && (
             <section className={cardClass}>
               <h3 className={titleClass}>
-                <Key className="w-3.5 h-3.5 text-champagne-gold" />
+                <Key className="w-3.5 h-3.5 text-wine-700" />
                 <span>{partner.name} forgot their password?</span>
               </h3>
               <form
@@ -294,11 +294,11 @@ export function SettingsModal({
           {/* Shared preferences */}
           <section className={cardClass}>
             <h3 className={titleClass}>
-              <Sliders className="w-3.5 h-3.5 text-champagne-gold" />
+              <Sliders className="w-3.5 h-3.5 text-wine-700" />
               <span>Shared settings</span>
             </h3>
             <div className="space-y-1.5">
-              <span className="text-xs text-stone-400">Currency for new wines</span>
+              <span className="text-xs text-ink-500">Currency for new wines</span>
               <div className="grid grid-cols-4 gap-2">
                 {['£', '$', '€', 'A$'].map((curr) => (
                   <button
@@ -308,8 +308,8 @@ export function SettingsModal({
                     onClick={() => saveSettings({ defaultCurrency: curr }, 'Currency saved.')}
                     className={`py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
                       settings.defaultCurrency === curr
-                        ? 'bg-wine-800/90 text-champagne-50 border-champagne-400/45'
-                        : 'bg-cellar-950/70 border-white/10 text-stone-300 hover:border-white/20'
+                        ? 'bg-wine-700 text-white border-wine-700'
+                        : 'bg-linen-50 border-linen-200 text-ink-700 hover:border-linen-300'
                     }`}
                   >
                     {curr}
@@ -319,14 +319,14 @@ export function SettingsModal({
             </div>
 
             <form
-              className="space-y-2 pt-3 border-t border-white/[0.07]"
+              className="space-y-2 pt-3 border-t border-linen-100"
               onSubmit={(e) => {
                 e.preventDefault();
                 saveSettings({ geminiApiKey }, 'Gemini key saved.');
                 setGeminiApiKey('');
               }}
             >
-              <span className="text-xs text-stone-300 block leading-relaxed">
+              <span className="text-xs text-ink-700 block leading-relaxed">
                 Gemini API key (optional): reads wine labels &amp; suggests bottles.
                 {settings.geminiKeyFromEnv && ' A key is set on the server; one saved here takes priority.'}
                 {settings.hasGeminiKey && !settings.geminiKeyFromEnv && ' A key is saved.'}
@@ -352,7 +352,7 @@ export function SettingsModal({
                 <button
                   type="button"
                   onClick={() => saveSettings({ geminiApiKey: '' }, 'Gemini key removed.')}
-                  className="text-xs text-stone-400 hover:text-stone-200 underline underline-offset-2"
+                  className="text-xs text-ink-500 hover:text-ink-900 underline underline-offset-2"
                 >
                   Remove the saved key
                 </button>
@@ -364,10 +364,10 @@ export function SettingsModal({
           {/* Backup */}
           <section className={cardClass}>
             <h3 className={titleClass}>
-              <Download className="w-3.5 h-3.5 text-champagne-gold" />
+              <Download className="w-3.5 h-3.5 text-wine-700" />
               <span>Backup</span>
             </h3>
-            <p className="text-xs text-stone-400 leading-relaxed">
+            <p className="text-xs text-ink-500 leading-relaxed">
               Downloads every wine, rating and comment as JSON. Photos stay on the server&apos;s photo volume.
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -376,10 +376,10 @@ export function SettingsModal({
                 download
                 className={`${buttonClass} flex items-center justify-center gap-1.5`}
               >
-                <Download className="w-4 h-4 text-champagne-300" /> Export
+                <Download className="w-4 h-4 text-wine-700" /> Export
               </a>
               <label className={`${buttonClass} flex items-center justify-center gap-1.5 cursor-pointer`}>
-                <Upload className="w-4 h-4 text-champagne-300" /> Restore
+                <Upload className="w-4 h-4 text-wine-700" /> Restore
                 <input
                   type="file"
                   accept=".json,application/json"

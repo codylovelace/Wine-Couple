@@ -8,8 +8,8 @@
 }
 
 body {
-  color: #f5f5f4;
-  background-color: #0c0a09;
+  color: #1e1716;
+  background-color: #faf7f2;
   min-height: 100vh;
   -webkit-tap-highlight-color: transparent;
   font-family: var(--font-sans);
@@ -19,7 +19,7 @@ body {
   -webkit-user-select: none;
   overscroll-behavior-y: none;
   background-image:
-    radial-gradient(ellipse 90% 45% at 50% -15%, rgba(126, 29, 52, 0.16), transparent 70%);
+    radial-gradient(ellipse 85% 40% at 50% -10%, rgba(126, 29, 52, 0.055), transparent 70%);
   background-attachment: fixed;
 }
 
@@ -66,12 +66,12 @@ input, textarea, select {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(212, 176, 106, 0.22);
+  background: rgba(120, 108, 102, 0.25);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(212, 176, 106, 0.42);
+  background: rgba(120, 108, 102, 0.45);
 }
 
 /* Hide scrollbar for clean horizontal pill scrolling on mobile */
@@ -83,42 +83,42 @@ input, textarea, select {
   scrollbar-width: none;
 }
 
-/* Editorial Sommelier Surfaces */
+/* Vineyard Linen & Bordeaux Surfaces */
 @layer components {
   .surface-card {
-    background: rgba(20, 17, 18, 0.92);
-    border: 1px solid rgba(244, 236, 224, 0.08);
-    box-shadow: 0 4px 24px -6px rgba(0, 0, 0, 0.5);
+    background: #ffffff;
+    border: 1px solid #eae2d7;
+    box-shadow: 0 2px 12px -3px rgba(38, 24, 18, 0.06), 0 1px 2px rgba(38, 24, 18, 0.03);
   }
 
   .surface-elevated {
-    background: rgba(26, 22, 24, 0.96);
-    border: 1px solid rgba(244, 236, 224, 0.11);
-    box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.65);
+    background: #ffffff;
+    border: 1px solid #e2d8c9;
+    box-shadow: 0 12px 32px -8px rgba(38, 24, 18, 0.14);
   }
 
   .surface-highlight {
-    background: linear-gradient(145deg, rgba(100, 23, 41, 0.42) 0%, rgba(20, 17, 18, 0.96) 72%);
-    border: 1px solid rgba(212, 176, 106, 0.28);
-    box-shadow: 0 10px 32px -10px rgba(71, 16, 30, 0.45);
+    background: linear-gradient(145deg, #fdf5f6 0%, #faf3e8 100%);
+    border: 1px solid rgba(126, 29, 52, 0.18);
+    box-shadow: 0 6px 20px -8px rgba(126, 29, 52, 0.12);
   }
 
   .glass-bar {
-    background: rgba(12, 10, 9, 0.86);
-    backdrop-filter: blur(22px);
-    -webkit-backdrop-filter: blur(22px);
+    background: rgba(250, 247, 242, 0.90);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
 
   .btn-primary {
     background: #7e1d34;
-    color: #fbf8f3;
-    border: 1px solid rgba(212, 176, 106, 0.3);
+    color: #fffdf9;
+    border: 1px solid #641628;
+    box-shadow: 0 4px 12px -2px rgba(126, 29, 52, 0.28);
     transition: background-color 0.15s ease, transform 0.12s ease, border-color 0.15s ease;
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #9a2640;
-    border-color: rgba(212, 176, 106, 0.45);
+    background: #96233e;
   }
 
   .btn-primary:active:not(:disabled) {
@@ -126,15 +126,14 @@ input, textarea, select {
   }
 
   .btn-secondary {
-    background: #231e20;
-    color: #f5f5f4;
-    border: 1px solid rgba(244, 236, 224, 0.1);
+    background: #f3ede4;
+    color: #1e1716;
+    border: 1px solid #e3d9cb;
     transition: background-color 0.15s ease, transform 0.12s ease, border-color 0.15s ease;
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: #332c2f;
-    border-color: rgba(244, 236, 224, 0.18);
+    background: #e8dfd2;
   }
 
   .btn-secondary:active:not(:disabled) {
@@ -142,12 +141,6 @@ input, textarea, select {
   }
 
   .field-input {
-    @apply bg-cellar-950/80 border border-white/10 text-stone-100 placeholder-stone-500 rounded-xl focus:outline-none focus:border-champagne-400/70 focus:ring-1 focus:ring-champagne-400/25 transition-colors font-sans;
+    @apply bg-white border border-linen-200 text-ink-900 placeholder-ink-400 rounded-xl focus:outline-none focus:border-wine-600 focus:ring-2 focus:ring-wine-600/15 transition-colors font-sans;
   }
-}
-
-.gold-text-shimmer {
-  background: linear-gradient(135deg, #fbf8f3 0%, #e9dcc6 50%, #d4b06a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
 }

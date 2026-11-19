@@ -76,8 +76,8 @@ export function MoreLikeThis({ wineId, wishlistNames, onAddToWishlist }: MoreLik
   return (
     <section className="space-y-2.5">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-champagne-300 flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-champagne-gold" />
+        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-wine-700 flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-wine-700" />
           More like this
         </h3>
         {set && (
@@ -94,7 +94,7 @@ export function MoreLikeThis({ wineId, wishlistNames, onAddToWishlist }: MoreLik
       </div>
 
       {error && (
-        <p className="p-3 rounded-xl bg-rose-500/10 border border-rose-400/25 text-xs text-rose-200" role="alert">
+        <p className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800" role="alert">
           {error}
         </p>
       )}
@@ -106,18 +106,18 @@ export function MoreLikeThis({ wineId, wishlistNames, onAddToWishlist }: MoreLik
       )}
 
       {!status && !error ? (
-        <p className="text-xs text-stone-400">Loading…</p>
+        <p className="text-xs text-ink-500">Loading…</p>
       ) : !set ? (
         status && !status.hasKey ? (
-          <p className="text-xs text-stone-400">Add a Gemini key in Settings to get suggestions for wines like this one.</p>
+          <p className="text-xs text-ink-500">Add a Gemini key in Settings to get suggestions for wines like this one.</p>
         ) : generating ? null : (
           <button
             type="button"
             onClick={generate}
             disabled={generating}
-            className="w-full py-3 rounded-xl surface-card hover:border-champagne-400/35 text-sm font-semibold text-champagne-100 flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
+            className="w-full py-3 rounded-xl surface-card hover:border-wine-300 text-sm font-semibold text-ink-900 flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
           >
-            <Sparkles className="w-4 h-4 text-champagne-gold" />
+            <Sparkles className="w-4 h-4 text-wine-700" />
             <span>Find wines that taste like this</span>
           </button>
         )
@@ -138,19 +138,19 @@ export function MoreLikeThis({ wineId, wishlistNames, onAddToWishlist }: MoreLik
                   />
                   <div className="flex items-start justify-between gap-2 pl-1">
                     <div className="min-w-0">
-                      <p className="font-serif text-lg font-semibold text-champagne-50 leading-snug">{rec.name}</p>
-                      <p className="text-xs text-stone-400 truncate">
+                      <p className="font-serif text-lg font-semibold text-ink-900 leading-snug">{rec.name}</p>
+                      <p className="text-xs text-ink-500 truncate">
                         {[rec.producer, rec.grape, rec.country].filter(Boolean).join(' · ')}
                       </p>
                     </div>
                     {rec.estimatedPrice > 0 && (
-                      <span className="text-xs font-semibold text-champagne-200 flex-shrink-0 tabular-nums">
+                      <span className="text-xs font-semibold text-ink-900 flex-shrink-0 tabular-nums">
                         ~{rec.currency}
                         {rec.estimatedPrice.toFixed(2)}
                       </span>
                     )}
                   </div>
-                  {rec.reason && <p className="text-xs text-stone-300 leading-relaxed pl-1">{rec.reason}</p>}
+                  {rec.reason && <p className="text-xs text-ink-700 leading-relaxed pl-1">{rec.reason}</p>}
                   <div className="flex items-center gap-2 pt-0.5 pl-1">
                     <button
                       type="button"
@@ -158,11 +158,11 @@ export function MoreLikeThis({ wineId, wishlistNames, onAddToWishlist }: MoreLik
                       aria-pressed={saved}
                       className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-1 border transition-colors ${
                         saved
-                          ? 'bg-wine-800/80 text-champagne-100 border-champagne-400/40'
-                          : 'bg-cellar-950/70 text-stone-200 border-white/10 hover:border-white/20'
+                          ? 'bg-wine-700 text-white border-wine-700'
+                          : 'bg-linen-50 text-ink-900 border-linen-200 hover:border-linen-300'
                       }`}
                     >
-                      <Bookmark className={`w-3 h-3 ${saved ? 'fill-champagne-gold text-champagne-gold' : ''}`} />
+                      <Bookmark className={`w-3 h-3 ${saved ? 'fill-white text-white' : ''}`} />
                       {saved ? 'On wishlist' : 'Wishlist'}
                     </button>
                     {rec.onlineLinks.wineSearcher && (
@@ -170,10 +170,10 @@ export function MoreLikeThis({ wineId, wishlistNames, onAddToWishlist }: MoreLik
                         href={rec.onlineLinks.wineSearcher}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-2.5 py-1.5 rounded-lg bg-cellar-950/70 border border-white/10 hover:border-white/20 text-[11px] text-stone-200 flex items-center gap-1 transition-colors"
+                        className="px-2.5 py-1.5 rounded-lg bg-linen-50 border border-linen-200 hover:border-linen-300 text-[11px] text-ink-900 flex items-center gap-1 transition-colors"
                       >
                         Find it
-                        <ExternalLink className="w-3 h-3 text-stone-400" />
+                        <ExternalLink className="w-3 h-3 text-ink-500" />
                       </a>
                     )}
                   </div>
@@ -181,7 +181,7 @@ export function MoreLikeThis({ wineId, wishlistNames, onAddToWishlist }: MoreLik
               );
             })}
           </ul>
-          <p className="text-[11px] text-stone-500">Suggested by Gemini {timeAgo(set.generatedAt)}</p>
+          <p className="text-[11px] text-ink-400">Suggested by Gemini {timeAgo(set.generatedAt)}</p>
         </>
       )}
     </section>

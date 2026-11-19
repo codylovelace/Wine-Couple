@@ -169,10 +169,10 @@ export function InsightsView({
     <div className="space-y-4 font-sans">
       {/* Header */}
       <div className="px-0.5">
-        <h2 className="font-serif text-2xl font-semibold text-champagne-50 tracking-wide">
+        <h2 className="font-serif text-2xl font-semibold text-ink-900 tracking-wide">
           Insights
         </h2>
-        <p className="text-xs text-stone-400 mt-0.5">
+        <p className="text-xs text-ink-500 mt-0.5">
           {partner
             ? `${me.name} & ${partner.name}'s shared cellar profile`
             : `${me.name}'s cellar profile`}
@@ -181,11 +181,11 @@ export function InsightsView({
 
       {stats.totalBottles === 0 ? (
         <div className="py-14 px-6 text-center space-y-3 surface-card rounded-2xl">
-          <div className="w-14 h-14 rounded-2xl bg-cellar-950 border border-white/10 flex items-center justify-center mx-auto">
-            <WineIcon className="w-6 h-6 text-champagne-400/50" />
+          <div className="w-14 h-14 rounded-2xl bg-linen-100 border border-linen-200 flex items-center justify-center mx-auto">
+            <WineIcon className="w-6 h-6 text-wine-700/60" />
           </div>
-          <h3 className="font-serif text-xl font-semibold text-champagne-50">No tasting data yet</h3>
-          <p className="text-xs text-stone-400 max-w-xs mx-auto leading-relaxed">
+          <h3 className="font-serif text-xl font-semibold text-ink-900">No tasting data yet</h3>
+          <p className="text-xs text-ink-500 max-w-xs mx-auto leading-relaxed">
             Log a bottle or two together and your palate harmony, top shops, and favorites will appear here.
           </p>
         </div>
@@ -200,7 +200,7 @@ export function InsightsView({
                   cy="32"
                   r={ringRadius}
                   fill="none"
-                  stroke="rgba(255,255,255,0.08)"
+                  stroke="rgba(126,29,52,0.12)"
                   strokeWidth="5"
                 />
                 <circle
@@ -208,31 +208,31 @@ export function InsightsView({
                   cy="32"
                   r={ringRadius}
                   fill="none"
-                  stroke="#d4b06a"
+                  stroke="#7e1d34"
                   strokeWidth="5"
                   strokeLinecap="round"
                   strokeDasharray={ringCircumference}
                   strokeDashoffset={ringDashOffset}
                 />
               </svg>
-              <span className="absolute text-sm font-bold text-champagne-100 tabular-nums">
+              <span className="absolute text-sm font-bold text-ink-900 tabular-nums">
                 {stats.dualRatedCount > 0 ? `${stats.agreementScore}%` : '—'}
               </span>
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-champagne-200">
-                <Sparkles className="w-3.5 h-3.5 text-champagne-gold" />
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-wine-700">
+                <Sparkles className="w-3.5 h-3.5 text-wine-700" />
                 <span>Palate Harmony</span>
               </div>
               {stats.dualRatedCount > 0 ? (
-                <p className="text-xs text-stone-200 mt-1 leading-relaxed">
+                <p className="text-xs text-ink-700 mt-1 leading-relaxed">
                   {stats.agreementScore >= 85
                     ? `You and ${partnerName} strongly agree across ${stats.dualRatedCount} shared tasting${stats.dualRatedCount === 1 ? '' : 's'}.`
                     : `You and ${partnerName} bring complementary tastes across ${stats.dualRatedCount} shared tasting${stats.dualRatedCount === 1 ? '' : 's'}.`}
                 </p>
               ) : (
-                <p className="text-xs text-stone-300 mt-1 leading-relaxed">
+                <p className="text-xs text-ink-700 mt-1 leading-relaxed">
                   Rate a bottle together to see how closely your tastes match.
                 </p>
               )}
@@ -242,41 +242,41 @@ export function InsightsView({
           {/* 4-Tile KPI Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div className="p-3.5 rounded-2xl surface-card">
-              <span className="text-[11px] uppercase font-semibold tracking-wider text-stone-400 block">
+              <span className="text-[11px] uppercase font-semibold tracking-wider text-ink-500 block">
                 Bottles
               </span>
-              <span className="text-2xl font-serif font-bold text-champagne-50 tabular-nums mt-0.5 block">
+              <span className="text-2xl font-serif font-bold text-ink-900 tabular-nums mt-0.5 block">
                 {stats.totalBottles}
               </span>
             </div>
 
             <div className="p-3.5 rounded-2xl surface-card">
-              <span className="text-[11px] uppercase font-semibold tracking-wider text-stone-400 block">
+              <span className="text-[11px] uppercase font-semibold tracking-wider text-ink-500 block">
                 Buy Again
               </span>
-              <span className="text-2xl font-serif font-bold text-emerald-300 tabular-nums mt-0.5 block">
+              <span className="text-2xl font-serif font-bold text-emerald-700 tabular-nums mt-0.5 block">
                 {stats.buyAgainTotal}
-                <span className="text-xs font-sans font-medium text-stone-400 ml-1">
+                <span className="text-xs font-sans font-medium text-ink-500 ml-1">
                   ({stats.buyAgainPct}%)
                 </span>
               </span>
             </div>
 
             <div className="p-3.5 rounded-2xl surface-card">
-              <span className="text-[11px] uppercase font-semibold tracking-wider text-stone-400 block">
+              <span className="text-[11px] uppercase font-semibold tracking-wider text-ink-500 block">
                 Total Spent
               </span>
-              <span className="text-2xl font-serif font-bold text-champagne-200 tabular-nums mt-0.5 block">
+              <span className="text-2xl font-serif font-bold text-wine-700 tabular-nums mt-0.5 block">
                 {currency}
                 {stats.totalSpend.toFixed(0)}
               </span>
             </div>
 
             <div className="p-3.5 rounded-2xl surface-card">
-              <span className="text-[11px] uppercase font-semibold tracking-wider text-stone-400 block">
+              <span className="text-[11px] uppercase font-semibold tracking-wider text-ink-500 block">
                 Avg / Bottle
               </span>
-              <span className="text-2xl font-serif font-bold text-champagne-100 tabular-nums mt-0.5 block">
+              <span className="text-2xl font-serif font-bold text-ink-900 tabular-nums mt-0.5 block">
                 {currency}
                 {stats.avgPrice}
               </span>
@@ -285,10 +285,10 @@ export function InsightsView({
 
           {/* Verdict Breakdown */}
           <section className="p-4 rounded-2xl surface-card space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-champagne-300">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-wine-700">
               Verdict Breakdown
             </h3>
-            <div className="h-2.5 rounded-full bg-cellar-950 overflow-hidden flex gap-0.5">
+            <div className="h-2.5 rounded-full bg-linen-100 overflow-hidden flex gap-0.5">
               {VERDICT_ORDER.map((v) => {
                 const count = stats.verdictCounts[v];
                 if (count === 0) return null;
@@ -308,10 +308,10 @@ export function InsightsView({
                 const count = stats.verdictCounts[v];
                 if (count === 0) return null;
                 return (
-                  <span key={v} className="inline-flex items-center gap-1.5 text-stone-300">
+                  <span key={v} className="inline-flex items-center gap-1.5 text-ink-700">
                     <span className={`w-2 h-2 rounded-full ${VERDICT_DOT[v]}`} />
                     <span>{VERDICTS[v].shortLabel}</span>
-                    <strong className="text-stone-100 tabular-nums">{count}</strong>
+                    <strong className="text-ink-900 tabular-nums">{count}</strong>
                   </span>
                 );
               })}
@@ -321,14 +321,14 @@ export function InsightsView({
           {/* Cellar Highlights */}
           {(stats.highestRatedWine || stats.bestValueWine) && (
             <section className="space-y-2.5">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-champagne-300 px-0.5">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-wine-700 px-0.5">
                 Cellar Highlights
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {stats.highestRatedWine && (
                   <HighlightCard
                     label="Highest Rated"
-                    accentClass="text-champagne-gold"
+                    accentClass="text-champagne-deep"
                     wine={stats.highestRatedWine}
                     meta={`${stats.highestRatedWine.averageRating.toFixed(1)}★`}
                     onClick={() => onSelectWine(stats.highestRatedWine!)}
@@ -337,7 +337,7 @@ export function InsightsView({
                 {stats.bestValueWine && (
                   <HighlightCard
                     label="Best Value"
-                    accentClass="text-sky-300"
+                    accentClass="text-sky-700"
                     wine={stats.bestValueWine}
                     meta={[
                       canonicalShop(stats.bestValueWine.purchase?.store),
@@ -356,7 +356,7 @@ export function InsightsView({
 
           {/* Style Breakdown */}
           <section className="p-4 rounded-2xl surface-card space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-champagne-300">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-wine-700">
               Wine Styles
             </h3>
             <div className="space-y-2.5">
@@ -369,15 +369,15 @@ export function InsightsView({
                 return (
                   <div key={t} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-2 text-stone-200 font-medium">
+                      <span className="flex items-center gap-2 text-ink-900 font-medium">
                         <span className={`w-2.5 h-2.5 rounded-full ${meta.dotClass}`} />
                         <span>{meta.label}</span>
                       </span>
-                      <span className="text-stone-400 tabular-nums">
-                        <strong className="text-stone-100">{count}</strong> ({pct}%)
+                      <span className="text-ink-500 tabular-nums">
+                        <strong className="text-ink-900">{count}</strong> ({pct}%)
                       </span>
                     </div>
-                    <div className="h-1.5 rounded-full bg-cellar-950 overflow-hidden">
+                    <div className="h-1.5 rounded-full bg-linen-100 overflow-hidden">
                       <div
                         className={`h-full rounded-full ${meta.barClass} transition-all`}
                         style={{ width: `${pct}%` }}
@@ -392,34 +392,34 @@ export function InsightsView({
           {/* Top Shops */}
           {stats.topShops.length > 0 && (
             <section className="surface-card rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/[0.07] flex items-center gap-2">
-                <ShoppingBag className="w-4 h-4 text-champagne-gold" />
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-champagne-300">
+              <div className="px-4 py-3 bg-linen-100/70 border-b border-linen-200 flex items-center gap-2">
+                <ShoppingBag className="w-4 h-4 text-wine-700" />
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-wine-700">
                   Top Shops
                 </h3>
               </div>
-              <ul className="divide-y divide-white/[0.07]">
+              <ul className="divide-y divide-linen-100">
                 {stats.topShops.map((s) => (
                   <li key={s.shop}>
                     <button
                       type="button"
                       onClick={() => onShopClick(s.shop)}
-                      className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-white/[0.02] transition-colors"
+                      className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-linen-50 transition-colors"
                     >
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-stone-100 truncate">{s.shop}</p>
-                        <p className="text-xs text-stone-400 tabular-nums">
+                        <p className="text-sm font-semibold text-ink-900 truncate">{s.shop}</p>
+                        <p className="text-xs text-ink-500 tabular-nums">
                           {s.count} bottle{s.count === 1 ? '' : 's'} · {s.buyAgain} worth buying again
                         </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {s.spend > 0 && (
-                          <span className="text-xs font-semibold text-champagne-200 tabular-nums">
+                          <span className="text-xs font-semibold text-ink-900 tabular-nums">
                             {s.currency}
                             {s.spend.toFixed(0)}
                           </span>
                         )}
-                        <ChevronRight className="w-4 h-4 text-stone-500" />
+                        <ChevronRight className="w-4 h-4 text-ink-400" />
                       </div>
                     </button>
                   </li>
@@ -432,8 +432,8 @@ export function InsightsView({
           {stats.topGrapes.length > 0 && (
             <section className="p-4 rounded-2xl surface-card space-y-2.5">
               <div className="flex items-center gap-2">
-                <Award className="w-4 h-4 text-champagne-gold" />
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-champagne-300">
+                <Award className="w-4 h-4 text-wine-700" />
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-wine-700">
                   Favorite Grapes
                 </h3>
               </div>
@@ -441,10 +441,10 @@ export function InsightsView({
                 {stats.topGrapes.map(([grape, count]) => (
                   <span
                     key={grape}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cellar-950/80 border border-white/[0.08] text-xs text-stone-200"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-linen-100 border border-linen-200 text-xs text-ink-900 font-medium"
                   >
                     <span>{grape}</span>
-                    <span className="text-champagne-gold font-semibold tabular-nums">{count}</span>
+                    <span className="text-wine-700 font-semibold tabular-nums">{count}</span>
                   </span>
                 ))}
               </div>
@@ -474,27 +474,27 @@ function HighlightCard({
     <button
       type="button"
       onClick={onClick}
-      className="p-3.5 rounded-2xl surface-card hover:border-champagne-400/35 flex items-center gap-3 text-left transition-colors"
+      className="p-3.5 rounded-2xl surface-card hover:border-wine-300 flex items-center gap-3 text-left transition-colors"
     >
-      <div className="w-11 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-cellar-950 border border-white/[0.08] flex items-center justify-center">
+      <div className="w-11 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-linen-100 border border-linen-200 flex items-center justify-center">
         {wine.imageUrl ? (
           <img src={wine.imageUrl} alt={title} className="w-full h-full object-cover" loading="lazy" />
         ) : (
-          <WineIcon className="w-4 h-4 text-champagne-400/35" />
+          <WineIcon className="w-4 h-4 text-wine-400/45" />
         )}
       </div>
       <div className="flex-1 min-w-0">
         <span className={`text-[11px] uppercase tracking-wider font-semibold block ${accentClass}`}>
           {label}
         </span>
-        <p className="font-serif text-lg font-semibold text-champagne-50 leading-tight truncate">
+        <p className="font-serif text-lg font-semibold text-ink-900 leading-tight truncate">
           {title}
         </p>
-        <p className="text-xs text-stone-400 truncate mt-0.5">
+        <p className="text-xs text-ink-500 truncate mt-0.5">
           {[meta, subtitle].filter(Boolean).join(' · ')}
         </p>
       </div>
-      <ChevronRight className="w-4 h-4 text-stone-500 flex-shrink-0" />
+      <ChevronRight className="w-4 h-4 text-ink-400 flex-shrink-0" />
     </button>
   );
 }

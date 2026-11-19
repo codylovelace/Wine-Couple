@@ -37,26 +37,26 @@ export function ShopPicker({ value, onChange, customShops, selectClass, inputCla
         className={selectClass}
         aria-label="Shop"
       >
-        <option value="" className="bg-cellar-900">
+        <option value="" className="bg-white text-ink-900">
           Not recorded
         </option>
-        <optgroup label="Supermarkets and shops" className="bg-cellar-900">
+        <optgroup label="Supermarkets and shops" className="bg-white text-ink-900">
           {UK_SHOPS.map((shop) => (
-            <option key={shop} value={shop} className="bg-cellar-900">
+            <option key={shop} value={shop} className="bg-white text-ink-900">
               {shop}
             </option>
           ))}
         </optgroup>
         {customShops.length > 0 && (
-          <optgroup label="Your other shops" className="bg-cellar-900">
+          <optgroup label="Your other shops" className="bg-white text-ink-900">
             {customShops.map((shop) => (
-              <option key={shop} value={shop} className="bg-cellar-900">
+              <option key={shop} value={shop} className="bg-white text-ink-900">
                 {shop}
               </option>
             ))}
           </optgroup>
         )}
-        <option value={CUSTOM} className="bg-cellar-900">
+        <option value={CUSTOM} className="bg-white text-ink-900">
           Custom…
         </option>
       </select>
